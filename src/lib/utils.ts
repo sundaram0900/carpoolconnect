@@ -25,20 +25,20 @@ export function formatTime(timeString: string): string {
 // Calculate distance between two locations (mock implementation)
 export function calculateDistance(start: Location, end: Location): number {
   // This would use a real geo-calculation in production
-  return Math.floor(Math.random() * 50) + 5; // Random distance between 5-55 miles
+  return Math.floor(Math.random() * 50) + 5; // Random distance between 5-55 km
 }
 
 // Calculate ride duration based on distance (mock implementation)
 export function calculateDuration(distance: number): number {
-  // Simple calculation: average speed of 50 mph
+  // Simple calculation: average speed of 50 km/h
   return Math.ceil(distance / 50 * 60); // Duration in minutes
 }
 
-// Format price as currency
+// Format price as Indian currency (₹)
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(price);
@@ -60,7 +60,7 @@ export async function fetchRides(): Promise<Ride[]> {
   // In a real app, this would be an API call
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Generate 10 mock rides
+  // Generate 10 mock rides with Indian cities and details
   return Array.from({ length: 10 }, (_, i) => ({
     id: `ride-${i + 1}`,
     driver: {
@@ -73,26 +73,26 @@ export async function fetchRides(): Promise<Ride[]> {
       verifiedDriver: i % 3 === 0
     },
     startLocation: {
-      address: `${100 + i} Main St`,
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA'
+      address: `${100 + i} ${['MG Road', 'Linking Road', 'Gandhi Marg', 'Nehru Place', 'Patel Chowk'][i % 5]}`,
+      city: ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Jaipur', 'Ahmedabad', 'Kochi'][i % 10],
+      state: ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Telangana', 'Maharashtra', 'West Bengal', 'Rajasthan', 'Gujarat', 'Kerala'][i % 10],
+      country: 'India'
     },
     endLocation: {
-      address: `${200 + i} Oak Ave`,
-      city: 'Los Angeles',
-      state: 'CA',
-      country: 'USA'
+      address: `${200 + i} ${['Bandra', 'Connaught Place', 'Koramangala', 'T Nagar', 'Jubilee Hills'][i % 5]}`,
+      city: ['Pune', 'Jaipur', 'Hyderabad', 'Kolkata', 'Delhi', 'Chennai', 'Mumbai', 'Kochi', 'Bangalore', 'Ahmedabad'][i % 10],
+      state: ['Maharashtra', 'Rajasthan', 'Telangana', 'West Bengal', 'Delhi', 'Tamil Nadu', 'Maharashtra', 'Kerala', 'Karnataka', 'Gujarat'][i % 10],
+      country: 'India'
     },
     date: new Date(Date.now() + i * 86400000).toISOString().split('T')[0],
     time: `${9 + (i % 8)}:${i % 2 === 0 ? '00' : '30'} ${i < 4 ? 'AM' : 'PM'}`,
     availableSeats: Math.floor(Math.random() * 3) + 1,
-    price: (Math.floor(Math.random() * 10) + 1) * 10,
+    price: (Math.floor(Math.random() * 10) + 1) * 500, // Prices in rupees (500-5000)
     status: 'scheduled' as const,
     createdAt: new Date().toISOString(),
     carInfo: {
-      make: ['Toyota', 'Honda', 'Tesla', 'Ford', 'BMW'][i % 5],
-      model: ['Corolla', 'Civic', 'Model 3', 'Focus', '3 Series'][i % 5],
+      make: ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Honda'][i % 5],
+      model: ['Swift', 'i20', 'Nexon', 'XUV300', 'City'][i % 5],
       year: 2018 + (i % 5),
       color: ['White', 'Black', 'Silver', 'Blue', 'Red'][i % 5]
     }
@@ -104,7 +104,7 @@ export async function fetchRideRequests(): Promise<RideRequest[]> {
   // In a real app, this would be an API call
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Generate 5 mock ride requests
+  // Generate 5 mock ride requests with Indian cities
   return Array.from({ length: 5 }, (_, i) => ({
     id: `request-${i + 1}`,
     user: {
@@ -116,21 +116,21 @@ export async function fetchRideRequests(): Promise<RideRequest[]> {
       reviewCount: Math.floor(Math.random() * 20) + 2
     },
     startLocation: {
-      address: `${300 + i} Pine St`,
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA'
+      address: `${300 + i} ${['Juhu', 'Saket', 'Indiranagar', 'Adyar', 'Banjara Hills'][i % 5]}`,
+      city: ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad'][i % 5],
+      state: ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Telangana'][i % 5],
+      country: 'India'
     },
     endLocation: {
-      address: `${400 + i} Market St`,
-      city: 'San Jose',
-      state: 'CA',
-      country: 'USA'
+      address: `${400 + i} ${['Andheri', 'Dwarka', 'HSR Layout', 'Velachery', 'HITEC City'][i % 5]}`,
+      city: ['Pune', 'Gurgaon', 'Mysore', 'Pondicherry', 'Warangal'][i % 5],
+      state: ['Maharashtra', 'Haryana', 'Karnataka', 'Puducherry', 'Telangana'][i % 5],
+      country: 'India'
     },
     date: new Date(Date.now() + i * 86400000).toISOString().split('T')[0],
     time: `${8 + (i % 10)}:${i % 2 === 0 ? '00' : '30'} ${i < 3 ? 'AM' : 'PM'}`,
     numberOfSeats: Math.floor(Math.random() * 2) + 1,
-    maxPrice: (Math.floor(Math.random() * 5) + 1) * 20,
+    maxPrice: (Math.floor(Math.random() * 5) + 1) * 400, // Max prices in rupees (400-2000)
     status: 'open' as const,
     createdAt: new Date().toISOString()
   }));
