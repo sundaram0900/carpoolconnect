@@ -1,14 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  rating?: number;
-};
+import { User } from "@/lib/types";
 
 type AuthContextType = {
   user: User | null;
@@ -52,12 +45,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Mock successful login
       if (email && password) {
-        const mockUser = {
+        const mockUser: User = {
           id: "user-1",
-          name: "John Doe",
+          name: "Sundaram",
           email,
-          avatar: "https://avatars.githubusercontent.com/u/1234567?v=4",
-          rating: 4.8
+          avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
+          phone: "+1 (555) 123-4567",
+          rating: 4.8,
+          reviewCount: 42,
+          verifiedDriver: true,
+          createdAt: new Date().toISOString()
         };
         
         setUser(mockUser);
@@ -85,12 +82,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (name && email && password) {
-        const mockUser = {
+        const mockUser: User = {
           id: "user-" + Date.now(),
-          name,
+          name: "Sundaram", // Set name to Sundaram regardless of input
           email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          rating: 5.0
+          avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
+          phone: "+1 (555) 987-6543",
+          rating: 5.0,
+          reviewCount: 12,
+          verifiedDriver: true,
+          createdAt: new Date().toISOString()
         };
         
         setUser(mockUser);
