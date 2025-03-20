@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Car, Mail, Phone, MapPin, Heart } from "lucide-react";
 
@@ -11,7 +10,7 @@ const Footer = () => {
           <div className="space-y-4">
             <Link to="/" className="text-primary font-bold text-xl flex items-center">
               <Car className="w-5 h-5 mr-2" />
-              CarpoolConnect
+              Ride and Share
             </Link>
             <p className="text-muted-foreground max-w-xs">
               The sustainable way to travel. Connect with drivers and passengers going your way.
@@ -84,8 +83,8 @@ const Footer = () => {
               </li>
               <li className="flex items-center">
                 <Mail className="w-4 h-4 mr-2 text-primary" />
-                <a href="mailto:contact@carpoolconnect.com" className="text-muted-foreground hover:text-primary transition-colors">
-                  contact@carpoolconnect.com
+                <a href="mailto:contact@rideandshare.com" className="text-muted-foreground hover:text-primary transition-colors">
+                  contact@rideandshare.com
                 </a>
               </li>
               <li className="flex items-center">
@@ -100,7 +99,7 @@ const Footer = () => {
         
         <div className="border-t border-border mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} CarpoolConnect. All rights reserved.
+            © {new Date().getFullYear()} Ride and Share. All rights reserved.
           </p>
           <p className="text-muted-foreground text-sm mt-2 md:mt-0 flex items-center">
             Made with <Heart className="h-3 w-3 text-red-500 mx-1" /> for the environment

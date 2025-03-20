@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ const Header = () => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
 
-  // Handle scroll effects
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -30,7 +28,6 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -42,7 +39,6 @@ const Header = () => {
     { name: "Request a Ride", path: "/request" },
   ];
 
-  // Animation variants for the mobile menu
   const menuVariants = {
     closed: {
       opacity: 0,
@@ -63,17 +59,15 @@ const Header = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo */}
         <Link 
           to="/" 
           className="text-primary font-bold text-xl md:text-2xl flex items-center"
         >
           <Car className="w-6 h-6 mr-2" />
-          <span className="hidden sm:inline">CarpoolConnect</span>
-          <span className="sm:hidden">CC</span>
+          <span className="hidden sm:inline">Ride and Share</span>
+          <span className="sm:hidden">R&S</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-1">
           {navItems.map((item) => (
             <Link
@@ -90,7 +84,6 @@ const Header = () => {
           ))}
         </nav>
 
-        {/* Auth/Profile Actions */}
         <div className="flex items-center">
           {isAuthenticated ? (
             <DropdownMenu>
@@ -125,7 +118,6 @@ const Header = () => {
             </Button>
           )}
 
-          {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
             size="icon"
@@ -142,7 +134,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.nav

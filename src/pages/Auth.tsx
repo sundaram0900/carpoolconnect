@@ -28,7 +28,7 @@ const Auth = () => {
           >
             <div className="max-w-md">
               <h1 className="text-3xl md:text-4xl font-semibold mb-6">
-                Welcome to CarpoolConnect
+                Welcome to Ride and Share
               </h1>
               <p className="text-muted-foreground text-lg mb-8">
                 Join our community of drivers and passengers sharing rides, saving money, and reducing carbon emissions.

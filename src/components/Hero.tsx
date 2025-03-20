@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Search, Car, MapPin } from "lucide-react";
@@ -48,7 +47,7 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             Connect with drivers and passengers going your way. 
-            CarpoolConnect makes sharing rides simple, affordable, and eco-friendly.
+            Ride and Share makes sharing rides simple, affordable, and eco-friendly.
           </motion.p>
           
           <motion.div 
