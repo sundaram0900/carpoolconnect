@@ -26,13 +26,15 @@ import {
   AlertCircle,
   Clock,
   LogOut,
-  Save
+  Save,
+  AtSign,
+  UserCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const Profile = () => {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, updateUsername } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -44,6 +46,7 @@ const Profile = () => {
   // Profile form state
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
+  const [username, setUsername] = useState(user?.username || "");
   const [bio, setBio] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -55,6 +58,7 @@ const Profile = () => {
     } else if (user) {
       setName(user.name);
       setPhone(user.phone || "");
+      setUsername(user.username || "");
     }
   }, [isLoading, isAuthenticated, navigate, user]);
 
@@ -106,6 +110,11 @@ const Profile = () => {
     try {
       setIsSavingProfile(true);
       
+      // Update username if it has changed
+      if (username !== user.username) {
+        await updateUsername(username);
+      }
+      
       // In a real app, this would call an API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -123,6 +132,7 @@ const Profile = () => {
     if (user) {
       setName(user.name);
       setPhone(user.phone || "");
+      setUsername(user.username || "");
       setBio("");
     }
     setIsEditingProfile(false);
@@ -176,6 +186,12 @@ const Profile = () => {
                           ({user.reviewCount || 0} reviews)
                         </span>
                       </div>
+                      {user.username && (
+                        <div className="flex items-center justify-center md:justify-start mt-1 text-muted-foreground">
+                          <AtSign className="h-4 w-4 mr-1" />
+                          {user.username}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="mt-4 md:mt-0 flex space-x-3">
@@ -236,6 +252,19 @@ const Profile = () => {
                             id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <div className="relative">
+                          <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             className="pl-10"
                           />
                         </div>

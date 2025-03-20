@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import SearchForm from "@/components/SearchForm";
-import RideCard from "@/components/RideCard";
 import { fetchRides } from "@/lib/utils";
 import { Ride } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import RideDetailsModal from "@/components/RideDetailsModal";
 
 const Search = () => {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -249,7 +249,19 @@ const Search = () => {
                 className="space-y-6"
               >
                 {filteredRides.map((ride) => (
-                  <RideCard key={ride.id} ride={ride} />
+                  <div key={ride.id} className="relative">
+                    <RideDetailsModal 
+                      ride={ride}
+                      trigger={
+                        <div className="cursor-pointer hover:shadow-md transition-shadow duration-200">
+                          <RideCard ride={ride} />
+                          <div className="absolute bottom-0 right-0 p-4">
+                            <Button size="sm" variant="default">Book Now</Button>
+                          </div>
+                        </div>
+                      }
+                    />
+                  </div>
                 ))}
               </motion.div>
             ) : (

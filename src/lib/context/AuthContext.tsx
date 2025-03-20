@@ -7,9 +7,11 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, username?: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, username: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
+  updateUsername: (username: string) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, username?: string) => {
     try {
       setIsLoading(true);
       
@@ -49,8 +51,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           id: "user-1",
           name: "Sundaram",
           email,
+          username: username || "sundaram123",
           avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
-          phone: "+1 (555) 123-4567",
+          phone: "+91 9876543210",
           rating: 4.8,
           reviewCount: 42,
           verifiedDriver: true,
@@ -73,7 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, username: string) => {
     try {
       setIsLoading(true);
       
@@ -81,13 +84,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Simulating API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (name && email && password) {
+      if (name && email && password && username) {
         const mockUser: User = {
           id: "user-" + Date.now(),
           name: "Sundaram", // Set name to Sundaram regardless of input
           email,
+          username,
           avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
-          phone: "+1 (555) 987-6543",
+          phone: "+91 9876543210",
           rating: 5.0,
           reviewCount: 12,
           verifiedDriver: true,
@@ -110,6 +114,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      setIsLoading(true);
+      
+      // In a real app, this would integrate with Google OAuth
+      // Simulating API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock successful Google login
+      const mockUser: User = {
+        id: "google-user-" + Date.now(),
+        name: "Sundaram",
+        email: "sundaram.google@example.com",
+        username: "sundaram_g",
+        avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
+        phone: "+91 9876543210",
+        rating: 4.9,
+        reviewCount: 27,
+        verifiedDriver: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem("carpoolUser", JSON.stringify(mockUser));
+      toast.success("Successfully logged in with Google!");
+      return true;
+    } catch (error) {
+      console.error("Google login error:", error);
+      toast.error("Failed to login with Google. Please try again.");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateUsername = async (username: string) => {
+    try {
+      if (!user) throw new Error("No user logged in");
+      
+      // In a real app, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const updatedUser = { ...user, username };
+      setUser(updatedUser);
+      localStorage.setItem("carpoolUser", JSON.stringify(updatedUser));
+      toast.success("Username updated successfully!");
+      return true;
+    } catch (error) {
+      console.error("Update username error:", error);
+      toast.error("Failed to update username. Please try again.");
+      return false;
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("carpoolUser");
@@ -124,7 +182,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isLoading,
         login,
         signup,
-        logout
+        loginWithGoogle,
+        logout,
+        updateUsername
       }}
     >
       {children}

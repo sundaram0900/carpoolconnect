@@ -13,6 +13,8 @@ export type Ride = {
   description?: string;
   carInfo?: CarInfo;
   createdAt: string;
+  driverDetails?: DriverDetails;
+  bookedBy?: string[];
 };
 
 export type RideRequest = {
@@ -39,6 +41,7 @@ export type User = {
   reviewCount?: number;
   createdAt?: string;
   verifiedDriver?: boolean;
+  username?: string;
 };
 
 export type Location = {
@@ -58,6 +61,12 @@ export type CarInfo = {
   licensePlate?: string;
 };
 
+export type DriverDetails = {
+  experience: string;
+  languages: string[];
+  verificationStatus: string;
+};
+
 export type Review = {
   id: string;
   author: User;
@@ -68,5 +77,11 @@ export type Review = {
   createdAt: string;
 };
 
-export type RideStatus = 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+export type RideStatus = 'scheduled' | 'in-progress' | 'completed' | 'cancelled' | 'booked';
 export type RequestStatus = 'open' | 'matched' | 'cancelled' | 'expired';
+
+export type BookingFormData = {
+  seats: number;
+  contactPhone: string;
+  notes: string;
+};

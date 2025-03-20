@@ -55,6 +55,20 @@ export function formatRating(rating: number): string {
   return rating.toFixed(1);
 }
 
+// Indian names for drivers and users
+const indianNames = [
+  "Aarav Sharma", "Aanya Patel", "Advait Mehta", "Aditi Singh", 
+  "Arjun Kumar", "Anaya Reddy", "Dhruv Agarwal", "Diya Gupta",
+  "Ishaan Joshi", "Isha Verma", "Kabir Malhotra", "Kyra Kapoor",
+  "Manav Chauhan", "Myra Choudhury", "Neha Bansal", "Neel Desai",
+  "Rohan Mehra", "Riya Shah", "Samar Rao", "Shanaya Dubey",
+  "Veer Saxena", "Vanya Khanna", "Yash Bajaj", "Zara Bose"
+];
+
+function getRandomIndianName() {
+  return indianNames[Math.floor(Math.random() * indianNames.length)];
+}
+
 // Mock function to fetch rides
 export async function fetchRides(): Promise<Ride[]> {
   // In a real app, this would be an API call
@@ -65,12 +79,13 @@ export async function fetchRides(): Promise<Ride[]> {
     id: `ride-${i + 1}`,
     driver: {
       id: `driver-${i + 1}`,
-      name: `Driver ${i + 1}`,
+      name: getRandomIndianName(),
       email: `driver${i + 1}@example.com`,
       avatar: i % 3 === 0 ? `https://randomuser.me/api/portraits/${i % 2 === 0 ? 'men' : 'women'}/${i + 1}.jpg` : undefined,
       rating: 4 + Math.random(),
       reviewCount: Math.floor(Math.random() * 50) + 5,
-      verifiedDriver: i % 3 === 0
+      verifiedDriver: i % 3 === 0,
+      phone: `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}`
     },
     startLocation: {
       address: `${100 + i} ${['MG Road', 'Linking Road', 'Gandhi Marg', 'Nehru Place', 'Patel Chowk'][i % 5]}`,
@@ -94,7 +109,13 @@ export async function fetchRides(): Promise<Ride[]> {
       make: ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Honda'][i % 5],
       model: ['Swift', 'i20', 'Nexon', 'XUV300', 'City'][i % 5],
       year: 2018 + (i % 5),
-      color: ['White', 'Black', 'Silver', 'Blue', 'Red'][i % 5]
+      color: ['White', 'Black', 'Silver', 'Blue', 'Red'][i % 5],
+      licensePlate: `${['MH', 'DL', 'KA', 'TN', 'TS', 'WB', 'RJ', 'GJ', 'KL'][i % 9]}-${(i + 1) * 10}${String.fromCharCode(65 + (i % 26))}-${1000 + i * 111}`
+    },
+    driverDetails: {
+      experience: `${2 + (i % 10)} years`,
+      languages: ['Hindi', 'English', ...(i % 3 === 0 ? ['Tamil'] : i % 3 === 1 ? ['Marathi'] : ['Bengali'])],
+      verificationStatus: i % 5 === 0 ? 'Gold verified' : i % 3 === 0 ? 'Silver verified' : 'Verified'
     }
   }));
 }
@@ -109,7 +130,7 @@ export async function fetchRideRequests(): Promise<RideRequest[]> {
     id: `request-${i + 1}`,
     user: {
       id: `user-${i + 1}`,
-      name: `User ${i + 1}`,
+      name: getRandomIndianName(),
       email: `user${i + 1}@example.com`,
       avatar: i % 2 === 0 ? `https://randomuser.me/api/portraits/${i % 2 === 0 ? 'women' : 'men'}/${i + 10}.jpg` : undefined,
       rating: 4 + Math.random(),
@@ -134,4 +155,34 @@ export async function fetchRideRequests(): Promise<RideRequest[]> {
     status: 'open' as const,
     createdAt: new Date().toISOString()
   }));
+}
+
+// Book a ride (mock implementation)
+export async function bookRide(rideId: string, userId: string, seats: number): Promise<boolean> {
+  // In a real app, this would be an API call to book the ride
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Mock success (95% success rate)
+  return Math.random() > 0.05;
+}
+
+// Get driver details (mock implementation)
+export async function getDriverDetails(driverId: string): Promise<User | null> {
+  // In a real app, this would be an API call to get driver details
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Mock driver details
+  const driverIndex = parseInt(driverId.replace('driver-', '')) || 1;
+  
+  return {
+    id: driverId,
+    name: getRandomIndianName(),
+    email: `driver${driverIndex}@example.com`,
+    avatar: driverIndex % 3 === 0 ? `https://randomuser.me/api/portraits/${driverIndex % 2 === 0 ? 'men' : 'women'}/${driverIndex + 1}.jpg` : undefined,
+    phone: `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+    rating: 4 + Math.random(),
+    reviewCount: Math.floor(Math.random() * 50) + 5,
+    verifiedDriver: driverIndex % 3 === 0,
+    createdAt: new Date(Date.now() - driverIndex * 30 * 86400000).toISOString()
+  };
 }
