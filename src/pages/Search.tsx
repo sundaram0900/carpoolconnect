@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import SearchForm from "@/components/SearchForm";
 import { fetchRides } from "@/lib/utils";
@@ -16,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideDetailsModal from "@/components/RideDetailsModal";
+import RideCard from "@/components/Search/RideCard";
 
 const Search = () => {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -55,8 +55,6 @@ const Search = () => {
     setSearchCriteria(criteria);
     setHasSearched(true);
     
-    // In a real app, we'd call an API with the search criteria
-    // For now, simulate a search delay
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
@@ -65,7 +63,6 @@ const Search = () => {
   const handleSort = (value: string) => {
     setSortOption(value);
     
-    // Sort the rides based on the selected option
     const sortedRides = [...rides];
     switch (value) {
       case "price-asc":
@@ -255,9 +252,6 @@ const Search = () => {
                       trigger={
                         <div className="cursor-pointer hover:shadow-md transition-shadow duration-200">
                           <RideCard ride={ride} />
-                          <div className="absolute bottom-0 right-0 p-4">
-                            <Button size="sm" variant="default">Book Now</Button>
-                          </div>
                         </div>
                       }
                     />

@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Ride, RideRequest, User, Location } from "@/lib/types"
@@ -62,7 +61,11 @@ const indianNames = [
   "Ishaan Joshi", "Isha Verma", "Kabir Malhotra", "Kyra Kapoor",
   "Manav Chauhan", "Myra Choudhury", "Neha Bansal", "Neel Desai",
   "Rohan Mehra", "Riya Shah", "Samar Rao", "Shanaya Dubey",
-  "Veer Saxena", "Vanya Khanna", "Yash Bajaj", "Zara Bose"
+  "Veer Saxena", "Vanya Khanna", "Yash Bajaj", "Zara Bose",
+  "Vikram Iyer", "Pooja Reddy", "Rahul Chopra", "Sanjana Mittal",
+  "Aditya Singhania", "Tanya Agarwal", "Karan Malhotra", "Meera Kapoor",
+  "Vivek Kumar", "Anjali Desai", "Nikhil Joshi", "Deepika Singh",
+  "Rajat Sharma", "Priya Gupta", "Varun Mehta", "Shreya Patel"
 ];
 
 function getRandomIndianName() {
