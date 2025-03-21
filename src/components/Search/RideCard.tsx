@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 interface RideCardProps {
   ride: Ride;
@@ -125,8 +126,10 @@ const RideCard = ({ ride, featured = false }: RideCardProps) => {
 
         {/* Book Button */}
         <div className="mt-4">
-          <Button className="w-full">
-            Book this ride <ArrowRight className="ml-2 h-4 w-4" />
+          <Button className="w-full" asChild>
+            <Link to={`/ride/${ride.id}`}>
+              Book this ride <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>

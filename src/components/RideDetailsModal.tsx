@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,24 +21,35 @@ import { Calendar, Clock, MapPin, Users, IndianRupee, Route, ShieldCheck, Car, I
 import DriverDetails from "./DriverDetails";
 import BookRideModal from "./BookRideModal";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface RideDetailsModalProps {
   ride: Ride;
   trigger?: React.ReactNode;
+  isOpenByDefault?: boolean;
 }
 
-const RideDetailsModal = ({ ride, trigger }: RideDetailsModalProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetailsModalProps) => {
+  const [isOpen, setIsOpen] = useState(isOpenByDefault);
   const [activeTab, setActiveTab] = useState("details");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   
   const distance = calculateDistance(ride.startLocation, ride.endLocation);
   const duration = calculateDuration(distance);
 
+  // Set isOpen to true if isOpenByDefault changes
+  useEffect(() => {
+    if (isOpenByDefault) {
+      setIsOpen(true);
+    }
+  }, [isOpenByDefault]);
+
   const handleOpenBooking = () => {
     if (!isAuthenticated) {
       toast.error("Please sign in to book a ride");
+      navigate("/auth");
       return;
     }
     
@@ -52,7 +63,14 @@ const RideDetailsModal = ({ ride, trigger }: RideDetailsModalProps) => {
     
     if (success) {
       setIsBookingModalOpen(false);
-      setTimeout(() => setIsOpen(false), 1500);
+      toast.success("Ride booked successfully! It will appear in your profile.");
+      setTimeout(() => {
+        setIsOpen(false);
+        // If we're on the ride details page, navigate back to search after booking
+        if (isOpenByDefault) {
+          navigate("/search");
+        }
+      }, 1500);
     }
     
     return success;
@@ -60,9 +78,15 @@ const RideDetailsModal = ({ ride, trigger }: RideDetailsModalProps) => {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        // If closed and we're on ride details page, navigate back to search
+        if (!open && isOpenByDefault) {
+          navigate("/search");
+        }
+      }}>
         <DialogTrigger asChild>
-          {trigger || <Button variant="link">View Details</Button>}
+          {!isOpenByDefault && (trigger || <Button variant="link">View Details</Button>)}
         </DialogTrigger>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

@@ -65,7 +65,9 @@ const indianNames = [
   "Vikram Iyer", "Pooja Reddy", "Rahul Chopra", "Sanjana Mittal",
   "Aditya Singhania", "Tanya Agarwal", "Karan Malhotra", "Meera Kapoor",
   "Vivek Kumar", "Anjali Desai", "Nikhil Joshi", "Deepika Singh",
-  "Rajat Sharma", "Priya Gupta", "Varun Mehta", "Shreya Patel"
+  "Rajat Sharma", "Priya Gupta", "Varun Mehta", "Shreya Patel",
+  "Siddharth Khanna", "Tanvi Reddy", "Ayush Verma", "Kavya Mishra",
+  "Pranav Choudhary", "Aishwarya Bajaj", "Dev Patil", "Anika Sharma"
 ];
 
 function getRandomIndianName() {
@@ -164,6 +166,8 @@ export async function fetchRideRequests(): Promise<RideRequest[]> {
 export async function bookRide(rideId: string, userId: string, seats: number): Promise<boolean> {
   // In a real app, this would be an API call to book the ride
   await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log(`Booking ride ${rideId} for user ${userId} with ${seats} seats`);
   
   // Mock success (95% success rate)
   return Math.random() > 0.05;

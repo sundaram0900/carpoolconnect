@@ -16,6 +16,7 @@ import RideRequest from "./pages/RideRequest";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import RideDetails from "./pages/RideDetails";
 
 // Components
 import Header from "./components/Header";
@@ -60,6 +61,7 @@ const AppRoutes = () => {
           <Route path="/request" element={<RideRequest />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/ride/:rideId" element={<RideDetails />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
