@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Search, Car, MapPin } from "lucide-react";
@@ -36,7 +37,7 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-6">
-              Share Rides, <span className="text-primary">Save Money</span>,<br />Reduce Emissions
+              Share Your Journey, <span className="text-primary">Save Together</span>,<br />Save Money
             </h1>
           </motion.div>
           
