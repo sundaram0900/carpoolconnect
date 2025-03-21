@@ -21,8 +21,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Ride, BookingFormData } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
+import PaymentOptions from "./PaymentOptions";
 
 interface BookRideModalProps {
   ride: Ride;
@@ -35,16 +36,24 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
   const [seats, setSeats] = useState<string>("1");
   const [contactPhone, setContactPhone] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("upi");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingStatus, setBookingStatus] = useState<"idle" | "success" | "error">("idle");
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   const totalPrice = parseInt(seats) * ride.price;
+  const serviceFee = Math.round(totalPrice * 0.05); // 5% service fee
+  const finalPrice = totalPrice + serviceFee;
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!seats || !contactPhone) {
-      toast.error("Please fill in all required fields");
+    if (currentStep === 1) {
+      if (!seats || !contactPhone) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+      setCurrentStep(2);
       return;
     }
     
@@ -58,7 +67,8 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
         success = await onBook({
           seats: parseInt(seats),
           contactPhone,
-          notes
+          notes,
+          paymentMethod
         });
       } catch (error) {
         console.error("Error in booking flow:", error);
@@ -87,7 +97,9 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     setSeats("1");
     setContactPhone("");
     setNotes("");
+    setPaymentMethod("upi");
     setBookingStatus("idle");
+    setCurrentStep(1);
     onClose();
   };
 
@@ -97,6 +109,10 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     } else {
       onClose();
     }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(1);
   };
   
   return (
@@ -128,97 +144,156 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
             <DialogHeader>
               <DialogTitle>Book this Ride</DialogTitle>
               <DialogDescription>
-                Complete the form below to book your spot in this ride.
+                {currentStep === 1 
+                  ? "Complete the form below to book your spot in this ride." 
+                  : "Choose your payment method to complete booking."}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Available seats:</span>
-                  <span className="font-medium">{ride.availableSeats}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Price per seat:</span>
-                  <span className="font-medium">{formatPrice(ride.price)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Date & Time:</span>
-                  <span className="font-medium">{ride.date} at {ride.time}</span>
-                </div>
-              </div>
+              {currentStep === 1 ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Available seats:</span>
+                      <span className="font-medium">{ride.availableSeats}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Price per seat:</span>
+                      <span className="font-medium flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        {formatPrice(ride.price)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Date & Time:</span>
+                      <span className="font-medium">{ride.date} at {ride.time}</span>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="seats">Number of Seats</Label>
-                <Select
-                  value={seats}
-                  onValueChange={setSeats}
-                >
-                  <SelectTrigger id="seats">
-                    <SelectValue placeholder="Select number of seats" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({length: ride.availableSeats}, (_, i) => i + 1).map(num => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} {num === 1 ? "seat" : "seats"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="seats">Number of Seats</Label>
+                    <Select
+                      value={seats}
+                      onValueChange={setSeats}
+                    >
+                      <SelectTrigger id="seats">
+                        <SelectValue placeholder="Select number of seats" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({length: ride.availableSeats}, (_, i) => i + 1).map(num => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num} {num === 1 ? "seat" : "seats"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Contact Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+91 9876543210"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  required
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Contact Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+91 9876543210"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      required
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Special Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any special requests or information for the driver"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Special Notes (Optional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Any special requests or information for the driver"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
 
-              <div className="pt-2">
-                <div className="flex justify-between items-center py-2 border-t border-b">
-                  <span className="font-medium">Total Price:</span>
-                  <span className="text-lg font-semibold">{formatPrice(totalPrice)}</span>
-                </div>
-              </div>
+                  <div className="pt-2">
+                    <div className="flex justify-between items-center py-2 border-t">
+                      <span className="font-medium">Total Price:</span>
+                      <span className="text-lg font-semibold flex items-center">
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        {formatPrice(totalPrice)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <PaymentOptions onSelectMethod={setPaymentMethod} />
+                  
+                  <div className="pt-2 space-y-2">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-medium flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        {formatPrice(totalPrice)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-muted-foreground">Service Fee:</span>
+                      <span className="font-medium flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        {formatPrice(serviceFee)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-t border-b">
+                      <span className="font-medium">Total Amount:</span>
+                      <span className="text-lg font-semibold flex items-center">
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        {formatPrice(finalPrice)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <DialogFooter className="pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Confirm Booking"
-                  )}
-                </Button>
+                {currentStep === 1 ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                    >
+                      Next
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBack}
+                      disabled={isSubmitting}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Pay & Book"
+                      )}
+                    </Button>
+                  </>
+                )}
               </DialogFooter>
             </form>
           </>

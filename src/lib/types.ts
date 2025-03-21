@@ -84,4 +84,5 @@ export type BookingFormData = {
   seats: number;
   contactPhone: string;
   notes: string;
+  paymentMethod?: string;
 };
