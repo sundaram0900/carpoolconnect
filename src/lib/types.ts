@@ -42,6 +42,20 @@ export type User = {
   createdAt?: string;
   verifiedDriver?: boolean;
   username?: string;
+  bio?: string;
+  notificationPreferences?: NotificationPreferences;
+  address?: string;
+  city?: string;
+  zipCode?: string;
+};
+
+export type NotificationPreferences = {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  smsNotifications: boolean;
+  rideReminders: boolean;
+  marketingEmails: boolean;
+  newRideAlerts: boolean;
 };
 
 export type Location = {

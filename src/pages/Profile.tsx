@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -10,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { getAvatarUrl, formatRating, fetchRides } from "@/lib/utils";
-import { Ride } from "@/lib/types";
+import { Ride, NotificationPreferences } from "@/lib/types";
 import RideCard from "@/components/RideCard";
+import UserPreferences from "@/components/UserPreferences";
 import { 
   Star, 
   User, 
@@ -28,7 +28,9 @@ import {
   LogOut,
   Save,
   AtSign,
-  UserCircle
+  UserCircle,
+  Home,
+  MapPinned
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -47,8 +49,22 @@ const Profile = () => {
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [username, setUsername] = useState(user?.username || "");
-  const [bio, setBio] = useState("");
+  const [bio, setBio] = useState(user?.bio || "");
+  const [address, setAddress] = useState(user?.address || "");
+  const [city, setCity] = useState(user?.city || "");
+  const [zipCode, setZipCode] = useState(user?.zipCode || "");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Handle saving notification preferences
+  const handleSavePreferences = async (preferences: NotificationPreferences) => {
+    if (!user) return;
+    
+    // In a real app, this would call an API
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // For demo purposes we're just showing a success message
+    return Promise.resolve();
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -59,6 +75,10 @@ const Profile = () => {
       setName(user.name);
       setPhone(user.phone || "");
       setUsername(user.username || "");
+      setBio(user.bio || "");
+      setAddress(user.address || "");
+      setCity(user.city || "");
+      setZipCode(user.zipCode || "");
     }
   }, [isLoading, isAuthenticated, navigate, user]);
 
@@ -115,7 +135,7 @@ const Profile = () => {
         await updateUsername(username);
       }
       
-      // In a real app, this would call an API
+      // In a real app, this would call an API to update all user details
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast.success("Profile updated successfully");
@@ -133,7 +153,10 @@ const Profile = () => {
       setName(user.name);
       setPhone(user.phone || "");
       setUsername(user.username || "");
-      setBio("");
+      setBio(user.bio || "");
+      setAddress(user.address || "");
+      setCity(user.city || "");
+      setZipCode(user.zipCode || "");
     }
     setIsEditingProfile(false);
   };
@@ -293,6 +316,43 @@ const Profile = () => {
                           rows={3}
                         />
                       </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <div className="relative">
+                          <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <div className="relative">
+                            <MapPinned className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="city"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="zipCode">ZIP Code</Label>
+                          <Input
+                            id="zipCode"
+                            value={zipCode}
+                            onChange={(e) => setZipCode(e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-4 space-y-2">
@@ -310,6 +370,12 @@ const Profile = () => {
                         <Calendar className="h-4 w-4 mr-2" />
                         Member since {new Date().toLocaleDateString()}
                       </div>
+                      {user.address && (
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          {user.address}, {user.city || ""} {user.zipCode || ""}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -317,17 +383,18 @@ const Profile = () => {
             </div>
           </motion.div>
           
-          {/* Rides Tabs */}
+          {/* Tabs for different sections */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 mb-8">
+              <TabsList className="grid grid-cols-4 mb-8">
                 <TabsTrigger value="upcoming">Upcoming Rides</TabsTrigger>
                 <TabsTrigger value="past">Past Rides</TabsTrigger>
                 <TabsTrigger value="offers">Your Offers</TabsTrigger>
+                <TabsTrigger value="preferences">Preferences</TabsTrigger>
               </TabsList>
               
               <TabsContent value="upcoming" className="space-y-6">
@@ -494,6 +561,22 @@ const Profile = () => {
                     </Button>
                   </div>
                 )}
+              </TabsContent>
+              
+              <TabsContent value="preferences" className="space-y-6">
+                <div className="glass-card rounded-xl p-6">
+                  <UserPreferences 
+                    initialPreferences={{
+                      emailNotifications: true,
+                      pushNotifications: true,
+                      smsNotifications: false,
+                      rideReminders: true,
+                      marketingEmails: false,
+                      newRideAlerts: true
+                    }}
+                    onSave={handleSavePreferences}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </motion.div>
