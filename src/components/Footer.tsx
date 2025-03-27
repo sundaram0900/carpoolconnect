@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Car, Mail, Phone, MapPin } from "lucide-react";
+import { Car, Mail, Phone, MapPin, Twitter, Facebook, Instagram, Linkedin } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -102,6 +102,20 @@ const Footer = () => {
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} Ride and Share. All rights reserved.
           </p>
+          <div className="flex space-x-4 mt-4 md:mt-0">
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-muted-foreground hover:text-primary transition-colors">
+              <Twitter className="h-5 w-5" />
+            </a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-muted-foreground hover:text-primary transition-colors">
+              <Facebook className="h-5 w-5" />
+            </a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-muted-foreground hover:text-primary transition-colors">
+              <Instagram className="h-5 w-5" />
+            </a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-muted-foreground hover:text-primary transition-colors">
+              <Linkedin className="h-5 w-5" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
