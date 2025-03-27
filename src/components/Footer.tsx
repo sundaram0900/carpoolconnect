@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Car, Mail, Phone, MapPin, Heart } from "lucide-react";
+import { Car, Mail, Phone, MapPin } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -101,9 +101,6 @@ const Footer = () => {
         <div className="border-t border-border mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} Ride and Share. All rights reserved.
-          </p>
-          <p className="text-muted-foreground text-sm mt-2 md:mt-0 flex items-center">
-            Made with <Heart className="h-3 w-3 text-red-500 mx-1" /> for the environment
           </p>
         </div>
       </div>
