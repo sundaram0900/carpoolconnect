@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { User } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextType = {
   user: User | null;
@@ -12,6 +13,7 @@ type AuthContextType = {
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
   updateUsername: (username: string) => Promise<boolean>;
+  updateProfile: (profileData: Partial<User>) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,48 +30,121 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock authentication for demonstration
   useEffect(() => {
-    const storedUser = localStorage.getItem("carpoolUser");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check for active session on mount
+    setIsLoading(true);
+    
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error fetching session:", error.message);
+          return;
+        }
+        
+        if (session) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error("Error fetching profile:", profileError.message);
+            return;
+          }
+          
+          if (profile) {
+            setUser({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              username: profile.username || undefined,
+              avatar: profile.avatar || undefined,
+              phone: profile.phone || undefined,
+              rating: profile.rating || 5.0,
+              reviewCount: profile.review_count || 0,
+              verifiedDriver: profile.verified_driver || false,
+              bio: profile.bio || undefined,
+              address: profile.address || undefined,
+              city: profile.city || undefined,
+              zipCode: profile.zip_code || undefined,
+              createdAt: profile.created_at
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSession();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error("Error fetching profile:", profileError.message);
+            return;
+          }
+          
+          if (profile) {
+            setUser({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              username: profile.username || undefined,
+              avatar: profile.avatar || undefined,
+              phone: profile.phone || undefined,
+              rating: profile.rating || 5.0,
+              reviewCount: profile.review_count || 0,
+              verifiedDriver: profile.verified_driver || false,
+              bio: profile.bio || undefined,
+              address: profile.address || undefined,
+              city: profile.city || undefined,
+              zipCode: profile.zip_code || undefined,
+              createdAt: profile.created_at
+            });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string, username?: string) => {
+  const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Mock successful login
-      if (email && password) {
-        const mockUser: User = {
-          id: "user-1",
-          name: "Sundaram",
-          email,
-          username: username || "sundaram123",
-          avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
-          phone: "+91 9876543210",
-          rating: 4.8,
-          reviewCount: 42,
-          verifiedDriver: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        setUser(mockUser);
-        localStorage.setItem("carpoolUser", JSON.stringify(mockUser));
-        toast.success("Successfully logged in!");
-        return true;
+      if (error) {
+        throw error;
       }
       
-      throw new Error("Invalid credentials");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Failed to login. Please check your credentials.");
+      toast.success("Successfully logged in!");
+      return true;
+    } catch (error: any) {
+      console.error("Login error:", error.message);
+      toast.error(`Failed to login: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -80,34 +155,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            username,
+          },
+        },
+      });
       
-      if (name && email && password && username) {
-        const mockUser: User = {
-          id: "user-" + Date.now(),
-          name: "Sundaram", // Set name to Sundaram regardless of input
-          email,
-          username,
-          avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
-          phone: "+91 9876543210",
-          rating: 5.0,
-          reviewCount: 12,
-          verifiedDriver: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        setUser(mockUser);
-        localStorage.setItem("carpoolUser", JSON.stringify(mockUser));
-        toast.success("Account created successfully!");
-        return true;
+      if (error) {
+        throw error;
       }
       
-      throw new Error("Invalid signup information");
-    } catch (error) {
-      console.error("Signup error:", error);
-      toast.error("Failed to create account. Please try again.");
+      toast.success("Account created successfully! Check your email to confirm your account.");
+      return true;
+    } catch (error: any) {
+      console.error("Signup error:", error.message);
+      toast.error(`Failed to create account: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -118,31 +185,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // In a real app, this would integrate with Google OAuth
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/profile',
+        },
+      });
       
-      // Mock successful Google login
-      const mockUser: User = {
-        id: "google-user-" + Date.now(),
-        name: "Sundaram",
-        email: "sundaram.google@example.com",
-        username: "sundaram_g",
-        avatar: "https://images.unsplash.com/photo-1581092795360-fd1ca04f0952",
-        phone: "+91 9876543210",
-        rating: 4.9,
-        reviewCount: 27,
-        verifiedDriver: true,
-        createdAt: new Date().toISOString()
-      };
+      if (error) {
+        throw error;
+      }
       
-      setUser(mockUser);
-      localStorage.setItem("carpoolUser", JSON.stringify(mockUser));
-      toast.success("Successfully logged in with Google!");
       return true;
-    } catch (error) {
-      console.error("Google login error:", error);
-      toast.error("Failed to login with Google. Please try again.");
+    } catch (error: any) {
+      console.error("Google login error:", error.message);
+      toast.error(`Failed to login with Google: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -153,25 +210,82 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (!user) throw new Error("No user logged in");
       
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ username })
+        .eq('id', user.id);
       
-      const updatedUser = { ...user, username };
-      setUser(updatedUser);
-      localStorage.setItem("carpoolUser", JSON.stringify(updatedUser));
+      if (error) {
+        throw error;
+      }
+      
+      setUser({
+        ...user,
+        username,
+      });
+      
       toast.success("Username updated successfully!");
       return true;
-    } catch (error) {
-      console.error("Update username error:", error);
-      toast.error("Failed to update username. Please try again.");
+    } catch (error: any) {
+      console.error("Update username error:", error.message);
+      toast.error(`Failed to update username: ${error.message}`);
       return false;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("carpoolUser");
-    toast.success("Logged out successfully");
+  const updateProfile = async (profileData: Partial<User>) => {
+    try {
+      if (!user) throw new Error("No user logged in");
+      
+      // Convert from frontend model to database model
+      const dbProfileData: Record<string, any> = {};
+      
+      if (profileData.name) dbProfileData.name = profileData.name;
+      if (profileData.phone) dbProfileData.phone = profileData.phone;
+      if (profileData.avatar) dbProfileData.avatar = profileData.avatar;
+      if (profileData.bio) dbProfileData.bio = profileData.bio;
+      if (profileData.address) dbProfileData.address = profileData.address;
+      if (profileData.city) dbProfileData.city = profileData.city;
+      if (profileData.zipCode) dbProfileData.zip_code = profileData.zipCode;
+      if (profileData.username) dbProfileData.username = profileData.username;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(dbProfileData)
+        .eq('id', user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser({
+        ...user,
+        ...profileData,
+      });
+      
+      toast.success("Profile updated successfully!");
+      return true;
+    } catch (error: any) {
+      console.error("Update profile error:", error.message);
+      toast.error(`Failed to update profile: ${error.message}`);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser(null);
+      toast.success("Logged out successfully");
+    } catch (error: any) {
+      console.error("Logout error:", error.message);
+      toast.error(`Failed to logout: ${error.message}`);
+    }
   };
 
   return (
@@ -184,7 +298,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signup,
         loginWithGoogle,
         logout,
-        updateUsername
+        updateUsername,
+        updateProfile
       }}
     >
       {children}

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { toast } from "sonner";
 import { NotificationPreferences } from "@/lib/types";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface UserPreferencesProps {
   initialPreferences?: NotificationPreferences;
@@ -23,9 +24,49 @@ const defaultPreferences: NotificationPreferences = {
   newRideAlerts: true
 };
 
-const UserPreferences = ({ initialPreferences = defaultPreferences, onSave }: UserPreferencesProps) => {
-  const [preferences, setPreferences] = useState<NotificationPreferences>(initialPreferences);
+const UserPreferences = ({ onSave }: UserPreferencesProps) => {
+  const { user } = useAuth();
+  const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching preferences:", error);
+          return;
+        }
+        
+        if (data) {
+          setPreferences({
+            emailNotifications: data.email_notifications,
+            pushNotifications: data.push_notifications,
+            smsNotifications: data.sms_notifications,
+            rideReminders: data.ride_reminders,
+            marketingEmails: data.marketing_emails,
+            newRideAlerts: data.new_ride_alerts
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch preferences:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPreferences();
+  }, [user]);
 
   const handleToggle = (key: keyof NotificationPreferences) => {
     setPreferences(prev => ({
@@ -38,7 +79,6 @@ const UserPreferences = ({ initialPreferences = defaultPreferences, onSave }: Us
     try {
       setIsSaving(true);
       await onSave(preferences);
-      toast.success("Preferences saved successfully");
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast.error("Failed to save preferences");
@@ -46,6 +86,14 @@ const UserPreferences = ({ initialPreferences = defaultPreferences, onSave }: Us
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <Card className="w-full shadow-sm">

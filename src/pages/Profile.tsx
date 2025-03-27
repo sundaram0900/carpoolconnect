@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -8,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getAvatarUrl, formatRating, fetchRides } from "@/lib/utils";
+import { getAvatarUrl, formatRating } from "@/lib/utils";
 import { Ride, NotificationPreferences } from "@/lib/types";
 import RideCard from "@/components/RideCard";
 import UserPreferences from "@/components/UserPreferences";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Star, 
   User, 
@@ -36,7 +38,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const Profile = () => {
-  const { user, isAuthenticated, isLoading, logout, updateUsername } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, updateUsername, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -59,11 +61,28 @@ const Profile = () => {
   const handleSavePreferences = async (preferences: NotificationPreferences) => {
     if (!user) return;
     
-    // In a real app, this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes we're just showing a success message
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('notification_preferences')
+        .update({
+          email_notifications: preferences.emailNotifications,
+          push_notifications: preferences.pushNotifications,
+          sms_notifications: preferences.smsNotifications,
+          ride_reminders: preferences.rideReminders,
+          marketing_emails: preferences.marketingEmails,
+          new_ride_alerts: preferences.newRideAlerts
+        })
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      toast.success("Preferences saved successfully");
+      return Promise.resolve();
+    } catch (error: any) {
+      console.error("Error saving preferences:", error);
+      toast.error(`Failed to save preferences: ${error.message}`);
+      return Promise.reject(error);
+    }
   };
 
   // Redirect if not authenticated
@@ -82,47 +101,139 @@ const Profile = () => {
     }
   }, [isLoading, isAuthenticated, navigate, user]);
 
-  // Load rides
+  // Load rides from Supabase
   useEffect(() => {
     const loadRides = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || !user) return;
       
       try {
         setIsLoadingRides(true);
-        const rides = await fetchRides();
         
-        // For demo purposes, randomly assign some rides as the user's
+        // Fetch upcoming rides (booked by user)
+        const { data: bookedRides, error: bookedError } = await supabase
+          .from('bookings')
+          .select(`
+            ride_id,
+            rides:ride_id(
+              id,
+              driver_id,
+              start_address,
+              start_city,
+              end_address,
+              end_city,
+              date,
+              time,
+              available_seats,
+              price,
+              status,
+              description,
+              car_make,
+              car_model,
+              car_color,
+              car_year,
+              driver:driver_id(*)
+            )
+          `)
+          .eq('user_id', user.id);
+          
+        if (bookedError) throw bookedError;
+        
+        // Fetch rides offered by user
+        const { data: offeredRides, error: offeredError } = await supabase
+          .from('rides')
+          .select(`*`)
+          .eq('driver_id', user.id);
+          
+        if (offeredError) throw offeredError;
+        
         const today = new Date();
         
-        // Upcoming rides (in the future)
+        // Transform booked rides
+        const transformedBookedRides = bookedRides
+          .filter(booking => booking.rides)
+          .map(booking => {
+            const ride = booking.rides;
+            return {
+              id: ride.id,
+              driver: ride.driver,
+              startLocation: {
+                address: ride.start_address,
+                city: ride.start_city
+              },
+              endLocation: {
+                address: ride.end_address,
+                city: ride.end_city
+              },
+              date: ride.date,
+              time: ride.time,
+              availableSeats: ride.available_seats,
+              price: ride.price,
+              status: ride.status,
+              description: ride.description,
+              carInfo: {
+                make: ride.car_make,
+                model: ride.car_model,
+                color: ride.car_color,
+                year: ride.car_year
+              },
+              createdAt: new Date().toISOString() // Fallback
+            };
+          });
+          
+        // Transform offered rides
+        const transformedOfferedRides = offeredRides.map(ride => {
+          return {
+            id: ride.id,
+            driver: user,
+            startLocation: {
+              address: ride.start_address,
+              city: ride.start_city
+            },
+            endLocation: {
+              address: ride.end_address,
+              city: ride.end_city
+            },
+            date: ride.date,
+            time: ride.time,
+            availableSeats: ride.available_seats,
+            price: ride.price,
+            status: ride.status,
+            description: ride.description,
+            carInfo: {
+              make: ride.car_make,
+              model: ride.car_model,
+              color: ride.car_color,
+              year: ride.car_year
+            },
+            createdAt: ride.created_at
+          };
+        });
+        
+        // Upcoming booked rides
         setUpcomingRides(
-          rides
+          transformedBookedRides
             .filter(ride => new Date(ride.date) > today)
-            .slice(0, 2)
         );
         
-        // Past rides (in the past)
+        // Past booked rides
         setPastRides(
-          rides
+          transformedBookedRides
             .filter(ride => new Date(ride.date) < today)
-            .slice(0, 3)
         );
         
-        // Rides the user has offered
-        setOfferHistory(
-          rides
-            .filter((_, index) => index % 3 === 0)
-            .slice(0, 2)
-        );
+        // Rides offered by user
+        setOfferHistory(transformedOfferedRides);
+        
       } catch (error) {
         console.error("Error fetching rides:", error);
+        toast.error("Failed to load rides");
       } finally {
         setIsLoadingRides(false);
       }
     };
 
     loadRides();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -130,15 +241,17 @@ const Profile = () => {
     try {
       setIsSavingProfile(true);
       
-      // Update username if it has changed
-      if (username !== user.username) {
-        await updateUsername(username);
-      }
+      // Update profile including username if changed
+      await updateProfile({
+        name,
+        phone,
+        username,
+        bio,
+        address,
+        city,
+        zipCode
+      });
       
-      // In a real app, this would call an API to update all user details
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success("Profile updated successfully");
       setIsEditingProfile(false);
     } catch (error) {
       console.error("Error updating profile:", error);
