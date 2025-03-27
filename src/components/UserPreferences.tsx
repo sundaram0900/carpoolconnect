@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,10 +77,31 @@ const UserPreferences = ({ onSave }: UserPreferencesProps) => {
   };
 
   const handleSave = async () => {
+    if (!user) {
+      toast.error("You must be logged in to save preferences");
+      return;
+    }
+    
     try {
       setIsSaving(true);
+      
+      const { error } = await supabase
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          email_notifications: preferences.emailNotifications,
+          push_notifications: preferences.pushNotifications,
+          sms_notifications: preferences.smsNotifications,
+          ride_reminders: preferences.rideReminders,
+          marketing_emails: preferences.marketingEmails,
+          new_ride_alerts: preferences.newRideAlerts
+        });
+      
+      if (error) throw error;
+      
       await onSave(preferences);
-    } catch (error) {
+      toast.success("Preferences saved successfully");
+    } catch (error: any) {
       console.error("Error saving preferences:", error);
       toast.error("Failed to save preferences");
     } finally {

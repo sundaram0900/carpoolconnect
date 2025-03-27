@@ -24,6 +24,8 @@ import { formatPrice } from "@/lib/utils";
 import { Loader2, CheckCircle, AlertCircle, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import PaymentOptions from "./PaymentOptions";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface BookRideModalProps {
   ride: Ride;
@@ -40,6 +42,7 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingStatus, setBookingStatus] = useState<"idle" | "success" | "error">("idle");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const { user } = useAuth();
 
   const totalPrice = parseInt(seats) * ride.price;
   const serviceFee = Math.round(totalPrice * 0.05); // 5% service fee
@@ -47,6 +50,11 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error("You must be logged in to book a ride");
+      return;
+    }
     
     if (currentStep === 1) {
       if (!seats || !contactPhone) {
@@ -59,10 +67,27 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     
     try {
       setIsSubmitting(true);
-      // For demo purposes, we'll simulate a successful booking
-      // This helps avoid potential errors in the mock implementation
-      let success = true;
       
+      // Insert the booking into Supabase
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          ride_id: ride.id,
+          user_id: user.id,
+          seats: parseInt(seats),
+          contact_phone: contactPhone,
+          notes: notes || null,
+          payment_method: paymentMethod
+        })
+        .select()
+        .single();
+      
+      if (bookingError) {
+        throw bookingError;
+      }
+      
+      // Call the onBook function as well (which might have additional logic)
+      let success = true;
       try {
         success = await onBook({
           seats: parseInt(seats),
@@ -71,9 +96,7 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
           paymentMethod
         });
       } catch (error) {
-        console.error("Error in booking flow:", error);
-        // Still proceed with success for demo
-        success = true;
+        console.error("Error in booking callback:", error);
       }
       
       setBookingStatus(success ? "success" : "error");
@@ -83,11 +106,10 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
       } else {
         toast.error("Failed to book ride. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error booking ride:", error);
-      // Still show success for demo purposes
-      setBookingStatus("success");
-      toast.success("Ride booked successfully!");
+      setBookingStatus("error");
+      toast.error(`Booking failed: ${error.message || "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }

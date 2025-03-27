@@ -1,307 +1,398 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { MapPin, Car, Calendar, Clock, Users, IndianRupee, Info } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Car, MapPin } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-export type RideFormType = "offer" | "request";
+const formSchema = z.object({
+  startCity: z.string().min(1, "Start city is required"),
+  startAddress: z.string().min(1, "Start address is required"),
+  endCity: z.string().min(1, "Destination city is required"),
+  endAddress: z.string().min(1, "Destination address is required"),
+  date: z.date(),
+  time: z.string().min(1, "Time is required"),
+  availableSeats: z.string().min(1, "Available seats is required"),
+  price: z.string().min(1, "Price is required"),
+  carMake: z.string().optional(),
+  carModel: z.string().optional(),
+  carYear: z.string().optional(),
+  carColor: z.string().optional(),
+  description: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface RideFormProps {
-  type: RideFormType;
+  type: "offer" | "request";
 }
 
 const RideForm = ({ type }: RideFormProps) => {
-  const [startLocation, setStartLocation] = useState("");
-  const [startCity, setStartCity] = useState("");
-  const [endLocation, setEndLocation] = useState("");
-  const [endCity, setEndCity] = useState("");
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [time, setTime] = useState("");
-  const [seats, setSeats] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [carMake, setCarMake] = useState("");
-  const [carModel, setCarModel] = useState("");
-  const [carYear, setCarYear] = useState("");
-  const [carColor, setCarColor] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      startCity: "",
+      startAddress: "",
+      endCity: "",
+      endAddress: "",
+      date: new Date(),
+      time: "09:00",
+      availableSeats: "2",
+      price: "500",
+      carMake: "",
+      carModel: "",
+      carYear: "",
+      carColor: "",
+      description: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isAuthenticated) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to create a ride",
-        variant: "destructive",
-      });
+  const onSubmit = async (data: FormValues) => {
+    if (!user) {
+      toast.error("You must be logged in to offer a ride");
       navigate("/auth");
       return;
     }
-    
+
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
-      
-      // Validation
-      if (!startLocation || !startCity || !endLocation || !endCity || !date || !time || !seats) {
-        toast({
-          title: "Missing information",
-          description: "Please fill out all required fields",
-          variant: "destructive",
+      if (type === "offer") {
+        const { error } = await supabase.from("rides").insert({
+          driver_id: user.id,
+          start_city: data.startCity,
+          start_address: data.startAddress,
+          end_city: data.endCity,
+          end_address: data.endAddress,
+          date: format(data.date, "yyyy-MM-dd"),
+          time: data.time,
+          available_seats: parseInt(data.availableSeats),
+          price: parseFloat(data.price),
+          car_make: data.carMake || null,
+          car_model: data.carModel || null,
+          car_year: data.carYear ? parseInt(data.carYear) : null,
+          car_color: data.carColor || null,
+          description: data.description || null,
+          status: "scheduled"
         });
-        return;
+
+        if (error) {
+          throw error;
+        }
+
+        toast.success("Ride offer posted successfully!");
+        navigate("/profile");
+      } else {
+        const { error } = await supabase.from("ride_requests").insert({
+          user_id: user.id,
+          start_city: data.startCity,
+          start_address: data.startAddress,
+          end_city: data.endCity,
+          end_address: data.endAddress,
+          date: format(data.date, "yyyy-MM-dd"),
+          time: data.time,
+          number_of_seats: parseInt(data.availableSeats),
+          max_price: parseFloat(data.price),
+          description: data.description || null,
+          status: "open"
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        toast.success("Ride request posted successfully!");
+        navigate("/profile");
       }
-      
-      // This would be an API call in a real app
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: `${type === "offer" ? "Ride offered" : "Ride requested"} successfully!`,
-        description: `Your ${type === "offer" ? "ride offer" : "request"} has been posted.`,
-      });
-      
-      navigate("/search");
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Something went wrong",
-        description: "Please try again later",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Error submitting form:", error);
+      toast.error(`Failed to submit: ${error.message || "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Locations */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="startLocation">Pickup Address</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="startLocation"
-                placeholder="Enter pickup address"
-                value={startLocation}
-                onChange={(e) => setStartLocation(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="startCity">Pickup City</Label>
-            <Input
-              id="startCity"
-              placeholder="Enter city"
-              value={startCity}
-              onChange={(e) => setStartCity(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="endLocation">Dropoff Address</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="endLocation"
-                placeholder="Enter dropoff address"
-                value={endLocation}
-                onChange={(e) => setEndLocation(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="endCity">Dropoff City</Label>
-            <Input
-              id="endCity"
-              placeholder="Enter city"
-              value={endCity}
-              onChange={(e) => setEndCity(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Date and Time */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="date">Date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card className="shadow-none">
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="startCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>Start City</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter start city" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="startAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>Start Address</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter start address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="endCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>Destination City</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter destination city" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="endAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>Destination Address</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter destination address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Date</span>
+                      </FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          onSelect={field.onChange}
+                          className="border rounded-md p-2 w-full"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <span>Time</span>
+                      </FormLabel>
+                      <FormControl>
+                        <TimePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="availableSeats"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <Users className="h-4 w-4" />
+                        <span>Available Seats</span>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.from({ length: 6 }, (_, i) => i + 1).map((seats) => (
+                            <SelectItem key={seats} value={String(seats)}>
+                              {seats}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center space-x-2">
+                      <IndianRupee className="h-4 w-4" />
+                      <span>Price per Seat</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Enter price per seat" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Select date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-                disabled={(date) => date < new Date()}
               />
-            </PopoverContent>
-          </Popover>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="time">Time</Label>
-          <Input
-            id="time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            required
-          />
-        </div>
-      </div>
-      
-      {/* Seats and Price */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="seats">
-            {type === "offer" ? "Available Seats" : "Number of Seats Needed"}
-          </Label>
-          <Input
-            id="seats"
-            type="number"
-            min="1"
-            max="8"
-            value={seats}
-            onChange={(e) => setSeats(e.target.value)}
-            required
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="price">
-            {type === "offer" ? "Price per Seat" : "Maximum Price per Seat"}
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              step="1"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="pl-8"
-              required={type === "offer"}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Car Info (Only for ride offers) */}
-      {type === "offer" && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium flex items-center">
-            <Car className="h-5 w-5 mr-2" /> Vehicle Information
-          </h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="carMake">Car Make</Label>
-              <Input
-                id="carMake"
-                placeholder="e.g., Toyota"
-                value={carMake}
-                onChange={(e) => setCarMake(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="carModel">Car Model</Label>
-              <Input
-                id="carModel"
-                placeholder="e.g., Prius"
-                value={carModel}
-                onChange={(e) => setCarModel(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="carYear">Year</Label>
-              <Input
-                id="carYear"
-                type="number"
-                min="1990"
-                max={new Date().getFullYear()}
-                placeholder="e.g., 2020"
-                value={carYear}
-                onChange={(e) => setCarYear(e.target.value)}
-                required
+
+              {type === "offer" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="carMake"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-2">
+                            <Car className="h-4 w-4" />
+                            <span>Car Make</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter car make" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="carModel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-2">
+                            <Car className="h-4 w-4" />
+                            <span>Car Model</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter car model" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="carYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-2">
+                            <Car className="h-4 w-4" />
+                            <span>Car Year</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="Enter car year" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="carColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-2">
+                            <Car className="h-4 w-4" />
+                            <span>Car Color</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter car color" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center space-x-2">
+                      <Info className="h-4 w-4" />
+                      <span>Additional Information</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Additional information about the ride"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="carColor">Color</Label>
-              <Input
-                id="carColor"
-                placeholder="e.g., Silver"
-                value={carColor}
-                onChange={(e) => setCarColor(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description">Additional Information</Label>
-        <Textarea
-          id="description"
-          placeholder="Enter any additional information or details about the ride"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-        />
-      </div>
-      
-      {/* Submit Button */}
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          "Processing..."
-        ) : type === "offer" ? (
-          "Offer Ride"
-        ) : (
-          "Request Ride"
-        )}
-      </Button>
-    </form>
+          </CardContent>
+        </Card>
+
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit"}
+        </Button>
+      </form>
+    </Form>
   );
 };
 
