@@ -1,14 +1,15 @@
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Ride, User, BookingFormData } from "./types";
+import { Ride, User, BookingFormData, RideStatus } from "./types";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatTime, formatPrice, calculateDistance, calculateDuration } from "./utils/formatUtils";
+import { formatDate, formatTime, formatPrice, formatRating, calculateDistance, calculateDuration } from "./utils/formatUtils";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export { formatDate, formatTime, formatPrice, calculateDistance, calculateDuration };
+export { formatDate, formatTime, formatPrice, formatRating, calculateDistance, calculateDuration };
 
 export const getAvatarUrl = (user?: User): string => {
   if (!user || !user.avatar) {
@@ -22,7 +23,8 @@ export const getAvatarUrl = (user?: User): string => {
   
   // If it's a Supabase storage path
   if (user.avatar.startsWith('avatars/')) {
-    return `${supabase.storageUrl}/avatars/${user.avatar}`;
+    // Use public URL construction without direct access to protected property
+    return `${process.env.SUPABASE_URL || 'https://fhirnenctfmnykafxypy.supabase.co'}/storage/v1/object/public/avatars/${user.avatar}`;
   }
   
   return user.avatar;
@@ -66,7 +68,7 @@ export async function fetchRides(): Promise<Ride[]> {
       time: ride.time,
       availableSeats: ride.available_seats,
       price: ride.price,
-      status: ride.status,
+      status: (ride.status as RideStatus) || 'scheduled',
       passengers: [],
       description: ride.description,
       carInfo: {
@@ -142,7 +144,7 @@ export const fetchRidesByStatus = async (status: string): Promise<Ride[]> => {
       time: ride.time,
       availableSeats: ride.available_seats,
       price: ride.price,
-      status: ride.status,
+      status: (ride.status as RideStatus) || 'scheduled',
       passengers: [],
       description: ride.description,
       carInfo: {
@@ -159,3 +161,4 @@ export const fetchRidesByStatus = async (status: string): Promise<Ride[]> => {
     return [];
   }
 };
+

@@ -41,6 +41,12 @@ export const formatPrice = (price: number): string => {
   });
 };
 
+export const formatRating = (rating: number): string => {
+  if (rating === undefined || rating === null) return 'N/A';
+  
+  return rating.toFixed(1);
+};
+
 export const calculateDistance = (startLocation: any, endLocation: any): number => {
   // Simplified implementation for demo purposes
   // In a real app, we would use Google Maps API or similar
@@ -69,3 +75,4 @@ export const calculateDuration = (distance: number): number => {
   const durationInHours = distance / 40;
   return Math.round(durationInHours * 60);
 };
+

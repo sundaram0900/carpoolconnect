@@ -13,7 +13,7 @@ import { databaseService } from "@/lib/services/database";
 import { getAvatarUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideList from "@/components/RideList";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { rideService } from "@/lib/services/rideService";
 
 const Profile = () => {
