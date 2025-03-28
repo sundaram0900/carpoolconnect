@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -361,8 +362,15 @@ export const databaseService = {
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
       // Using Supabase Edge Function instead of direct table access
+      // Fix: Define the body as a properly typed object with explicit property names
+      const body = {
+        method: 'list' as const,
+        userId: userId,
+        rideId: rideId
+      };
+      
       const response = await supabase.functions.invoke('ride-chat', {
-        body: { method: 'list', userId: userId, rideId: rideId }
+        body: body
       });
       
       if (response.error) {
