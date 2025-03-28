@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ride, User } from "@/lib/types";
@@ -7,6 +8,7 @@ import { VerifyOTP } from "./ui/verify-otp";
 import RideChat from "./RideChat";
 import { rideService } from "@/lib/services/rideService";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   MessageSquare, 
   Info, 
@@ -14,8 +16,19 @@ import {
   ReceiptText,
   PlayCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  MapPin,
+  Calendar,
+  Clock,
+  LayoutDashboard as Route,
+  DollarSign as IndianRupee,
+  Users,
+  Car
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDate, formatTime, formatPrice, getAvatarUrl } from "@/lib/utils";
+import DriverDetails from "./DriverDetails";
 
 interface RideDetailsModalTabsProps {
   ride: Ride;
@@ -37,6 +50,10 @@ const RideDetailsModalTabs = ({
   const canCompleteRide = isDriver && ride.status === 'in-progress';
   const canCancelRide = isDriver && (ride.status === 'scheduled' || ride.status === 'in-progress');
   
+  // Calculate distance and duration
+  const distance = 20; // example value in km
+  const duration = 45; // example value in minutes
+
   // Determine who the chat will be with
   let chatWithUser: User;
   if (isDriver) {

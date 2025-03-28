@@ -41,9 +41,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
             rideId: msg.ride_id,
             content: msg.content,
             timestamp: msg.created_at,
-            read: msg.read,
-            sender: mapDbProfileToUser(msg.sender),
-            recipient: mapDbProfileToUser(msg.recipient)
+            read: msg.read
           }));
           setMessages(formattedMessages);
         }
@@ -71,44 +69,31 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Fetch sender and recipient details
-          const { data: sender } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newMsg.sender_id)
-            .single();
-            
-          const { data: recipient } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newMsg.recipient_id)
-            .single();
-            
           // Only add messages related to this conversation
           if (
             (newMsg.sender_id === user.id && newMsg.recipient_id === otherUser.id) ||
             (newMsg.sender_id === otherUser.id && newMsg.recipient_id === user.id)
           ) {
-            const formattedMessage = {
+            const formattedMessage: Message = {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               recipientId: newMsg.recipient_id,
               rideId: newMsg.ride_id,
               content: newMsg.content,
               timestamp: newMsg.created_at,
-              read: newMsg.read,
-              sender: mapDbProfileToUser(sender),
-              recipient: mapDbProfileToUser(recipient)
+              read: newMsg.read
             };
             
             setMessages((prev) => [...prev, formattedMessage]);
             
             // Mark as read if it's a message to the current user
             if (newMsg.recipient_id === user.id) {
-              await supabase
-                .from('messages')
-                .update({ read: true })
-                .eq('id', newMsg.id);
+              await supabase.functions.invoke('ride-chat', {
+                body: { 
+                  method: 'mark-read', 
+                  messageId: newMsg.id 
+                }
+              });
             }
           }
         }
@@ -125,25 +110,11 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const mapDbProfileToUser = (profile: any): User => {
-    if (!profile) return {} as User;
-    
-    return {
-      id: profile.id,
-      name: profile.name,
-      email: profile.email,
-      avatar: profile.avatar,
-      phone: profile.phone,
-      rating: profile.rating,
-      reviewCount: profile.review_count,
-      verifiedDriver: profile.verified_driver,
-      username: profile.username,
-      bio: profile.bio,
-      address: profile.address,
-      city: profile.city,
-      zipCode: profile.zip_code,
-      createdAt: profile.created_at
-    };
+  const getSenderName = (senderId: string): string => {
+    if (senderId === user?.id) {
+      return user?.name || "You";
+    }
+    return otherUser.name || "Other User";
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -199,11 +170,11 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
               {message.senderId !== user?.id && (
                 <Avatar className="h-8 w-8 mr-2 mt-1">
                   <AvatarImage
-                    src={getAvatarUrl(message.sender)}
-                    alt={message.sender?.name}
+                    src={getAvatarUrl(otherUser)}
+                    alt={getSenderName(message.senderId)}
                   />
                   <AvatarFallback>
-                    {message.sender?.name?.charAt(0) || "U"}
+                    {getSenderName(message.senderId).charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
               )}

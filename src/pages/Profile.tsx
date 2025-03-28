@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +13,8 @@ import { databaseService } from "@/lib/services/database";
 import { getAvatarUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideList from "@/components/RideList";
+import { toast } from "react-toastify";
+import { rideService } from "@/lib/services/rideService";
 
 const Profile = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -91,6 +92,12 @@ const Profile = () => {
   }
 
   const userBookedRides = bookings.map(booking => booking.ride);
+
+  const handleSavePreferences = async (preferences: any) => {
+    // Implementation for saving preferences
+    console.log("Saving preferences:", preferences);
+    toast.success("Preferences updated");
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-20">
@@ -443,7 +450,7 @@ const Profile = () => {
               <TabsContent value="preferences">
                 <div className="glass-card rounded-xl p-6">
                   <h3 className="text-xl font-semibold mb-6">Preferences & Settings</h3>
-                  <UserPreferences />
+                  <UserPreferences onSave={handleSavePreferences} />
                 </div>
               </TabsContent>
             </Tabs>
