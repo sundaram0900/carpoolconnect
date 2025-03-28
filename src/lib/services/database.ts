@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -361,7 +360,7 @@ export const databaseService = {
   // Function that handles messages
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
-      // Fix for TypeScript error by properly typing the parameters object
+      // Fix the TypeScript error by properly typing the parameters
       const response = await supabase.functions.invoke('ride-chat', {
         body: {
           method: 'list',
