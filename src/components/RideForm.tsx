@@ -13,10 +13,9 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MapPin, Car, Calendar, Clock, Users, IndianRupee, Info } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/context/AuthContext";
 import { format } from "date-fns";
+import { databaseService } from "@/lib/services/database";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const formSchema = z.object({
   startCity: z.string().min(1, "Start city is required"),
@@ -75,51 +74,39 @@ const RideForm = ({ type }: RideFormProps) => {
 
     try {
       if (type === "offer") {
-        const { error } = await supabase.from("rides").insert({
-          driver_id: user.id,
-          start_city: data.startCity,
-          start_address: data.startAddress,
-          end_city: data.endCity,
-          end_address: data.endAddress,
+        const result = await databaseService.createRide({
+          ...data,
           date: format(data.date, "yyyy-MM-dd"),
-          time: data.time,
-          available_seats: parseInt(data.availableSeats),
+          availableSeats: parseInt(data.availableSeats),
           price: parseFloat(data.price),
-          car_make: data.carMake || null,
-          car_model: data.carModel || null,
-          car_year: data.carYear ? parseInt(data.carYear) : null,
-          car_color: data.carColor || null,
-          description: data.description || null,
-          status: "scheduled"
-        });
+          carYear: data.carYear ? parseInt(data.carYear) : null,
+        }, user.id);
 
-        if (error) {
-          throw error;
+        if (result) {
+          toast.success("Ride offer posted successfully!");
+          navigate("/profile");
+        } else {
+          toast.error("Failed to post ride offer");
         }
-
-        toast.success("Ride offer posted successfully!");
-        navigate("/profile");
       } else {
-        const { error } = await supabase.from("ride_requests").insert({
-          user_id: user.id,
-          start_city: data.startCity,
-          start_address: data.startAddress,
-          end_city: data.endCity,
-          end_address: data.endAddress,
+        const result = await databaseService.createRideRequest({
+          startCity: data.startCity,
+          startAddress: data.startAddress,
+          endCity: data.endCity,
+          endAddress: data.endAddress,
           date: format(data.date, "yyyy-MM-dd"),
           time: data.time,
-          number_of_seats: parseInt(data.availableSeats),
-          max_price: parseFloat(data.price),
+          numberOfSeats: parseInt(data.availableSeats),
+          maxPrice: parseFloat(data.price),
           description: data.description || null,
-          status: "open"
-        });
+        }, user.id);
 
-        if (error) {
-          throw error;
+        if (result) {
+          toast.success("Ride request posted successfully!");
+          navigate("/profile");
+        } else {
+          toast.error("Failed to post ride request");
         }
-
-        toast.success("Ride request posted successfully!");
-        navigate("/profile");
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);

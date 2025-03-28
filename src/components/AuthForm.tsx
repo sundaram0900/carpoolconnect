@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/context/AuthContext";
 import { AtSign, Lock, User, Loader2, UserCircle, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const AuthForm = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLogin, setIsGoogleLogin] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [signupError, setSignupError] = useState<string | null>(null);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -31,6 +33,17 @@ const AuthForm = () => {
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+    
+    if (!loginEmail && !loginUsername) {
+      setLoginError("Please provide either an email or username");
+      return;
+    }
+    
+    if (!loginPassword) {
+      setLoginError("Password is required");
+      return;
+    }
     
     try {
       setIsLoggingIn(true);
@@ -38,7 +51,12 @@ const AuthForm = () => {
       
       if (success) {
         navigate("/profile");
+      } else {
+        setLoginError("Invalid credentials. Please try again.");
       }
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("An error occurred while logging in");
     } finally {
       setIsLoggingIn(false);
     }
@@ -46,9 +64,30 @@ const AuthForm = () => {
   
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSignupError(null);
+    
+    if (!signupName.trim()) {
+      setSignupError("Name is required");
+      return;
+    }
+    
+    if (!signupEmail.trim()) {
+      setSignupError("Email is required");
+      return;
+    }
     
     if (!signupUsername.trim()) {
-      alert("Username is required");
+      setSignupError("Username is required");
+      return;
+    }
+    
+    if (!signupPassword.trim()) {
+      setSignupError("Password is required");
+      return;
+    }
+    
+    if (signupPassword.length < 8) {
+      setSignupError("Password must be at least 8 characters");
       return;
     }
     
@@ -58,7 +97,12 @@ const AuthForm = () => {
       
       if (success) {
         navigate("/profile");
+      } else {
+        setSignupError("Failed to create account. Please try again.");
       }
+    } catch (error) {
+      console.error("Signup error:", error);
+      setSignupError("An error occurred while creating your account");
     } finally {
       setIsSigningUp(false);
     }
@@ -115,8 +159,18 @@ const AuthForm = () => {
           onSubmit={handleLogin}
           className="space-y-6"
         >
+          {loginError && (
+            <motion.div 
+              variants={itemVariants}
+              className="flex items-center p-3 text-sm bg-destructive/15 text-destructive rounded"
+            >
+              <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+              <p>{loginError}</p>
+            </motion.div>
+          )}
+          
           <motion.div variants={itemVariants} className="space-y-2">
-            <Label htmlFor="login-email">Email</Label>
+            <Label htmlFor="login-email">Email (Optional if username is provided)</Label>
             <div className="relative">
               <AtSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -126,7 +180,20 @@ const AuthForm = () => {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 className="pl-10"
-                required
+              />
+            </div>
+          </motion.div>
+          
+          <motion.div variants={itemVariants} className="space-y-2">
+            <Label htmlFor="login-username">Username (Optional if email is provided)</Label>
+            <div className="relative">
+              <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="login-username"
+                placeholder="Enter your username"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                className="pl-10"
               />
             </div>
           </motion.div>
@@ -143,20 +210,6 @@ const AuthForm = () => {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="pl-10"
                 required
-              />
-            </div>
-          </motion.div>
-          
-          <motion.div variants={itemVariants} className="space-y-2">
-            <Label htmlFor="login-username">Username (Optional)</Label>
-            <div className="relative">
-              <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="login-username"
-                placeholder="Enter your username"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                className="pl-10"
               />
             </div>
           </motion.div>
@@ -220,6 +273,16 @@ const AuthForm = () => {
           onSubmit={handleSignup}
           className="space-y-6"
         >
+          {signupError && (
+            <motion.div 
+              variants={itemVariants}
+              className="flex items-center p-3 text-sm bg-destructive/15 text-destructive rounded"
+            >
+              <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+              <p>{signupError}</p>
+            </motion.div>
+          )}
+          
           <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="signup-name">Full Name</Label>
             <div className="relative">

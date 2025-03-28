@@ -127,17 +127,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, username?: string) => {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      let authResponse;
       
-      if (error) {
-        throw error;
+      // Try to log in with email first
+      if (email) {
+        authResponse = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+      }
+      
+      // If login with email fails or username is provided, try to find the email with the username
+      if ((authResponse?.error || !email) && username) {
+        // Find the user with the given username
+        const { data: userProfile, error: userError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', username)
+          .single();
+        
+        if (userError) {
+          console.error("Error finding user with username:", userError.message);
+          toast.error("Username not found");
+          return false;
+        }
+        
+        if (userProfile) {
+          authResponse = await supabase.auth.signInWithPassword({
+            email: userProfile.email,
+            password,
+          });
+        }
+      }
+      
+      if (authResponse?.error) {
+        throw authResponse.error;
       }
       
       toast.success("Successfully logged in!");
