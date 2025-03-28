@@ -361,16 +361,21 @@ export const databaseService = {
   // Function that handles messages
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
-      // Using Supabase Edge Function instead of direct table access
-      // Fix: Define the body as a properly typed object with explicit property names
-      const body = {
-        method: 'list' as const,
+      // Define a properly typed parameter object
+      type ChatFunctionParams = {
+        method: 'list';
+        userId: string;
+        rideId: string;
+      };
+      
+      const params: ChatFunctionParams = {
+        method: 'list',
         userId: userId,
         rideId: rideId
       };
       
       const response = await supabase.functions.invoke('ride-chat', {
-        body: body
+        body: params
       });
       
       if (response.error) {
