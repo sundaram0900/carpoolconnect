@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.31.0"
 import { Resend } from "npm:resend@1.0.0"
@@ -7,6 +6,28 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
+
+// Type definitions for request parameters
+interface ListMessagesParams {
+  method: 'list';
+  userId: string;
+  rideId: string;
+}
+
+interface SendMessageParams {
+  method: 'send';
+  senderId: string;
+  recipientId: string;
+  rideId: string;
+  content: string;
+}
+
+interface MarkReadParams {
+  method: 'mark-read';
+  messageId: string;
+}
+
+type ChatFunctionParams = ListMessagesParams | SendMessageParams | MarkReadParams;
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -25,10 +46,12 @@ serve(async (req) => {
     // Create Resend client (if API key is available)
     const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
     
-    const { method } = req.url.split('?')[0].split('/').pop() || ''
+    // Parse the request body to get the parameters
+    const params = await req.json() as ChatFunctionParams;
+    const method = params.method;
     
     if (method === 'send') {
-      const { senderId, recipientId, rideId, content } = await req.json()
+      const { senderId, recipientId, rideId, content } = params;
       
       if (!senderId || !recipientId || !rideId || !content) {
         return new Response(
@@ -119,7 +142,7 @@ serve(async (req) => {
         }
       )
     } else if (method === 'list') {
-      const { userId, rideId } = await req.json()
+      const { userId, rideId } = params;
       
       if (!userId || !rideId) {
         return new Response(
@@ -165,6 +188,41 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify(data),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      )
+    } else if (method === 'mark-read') {
+      const { messageId } = params;
+      
+      if (!messageId) {
+        return new Response(
+          JSON.stringify({ error: "Missing messageId" }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400
+          }
+        )
+      }
+      
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('id', messageId)
+      
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: "Failed to mark message as read" }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500
+          }
+        )
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200

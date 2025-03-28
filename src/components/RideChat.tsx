@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,13 +28,12 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
-        // Fixed type for function parameters
         const { data } = await supabase.functions.invoke('ride-chat', {
           body: { 
             method: 'list', 
             userId: user.id, 
             rideId: ride.id 
-          } as Record<string, string>
+          } as Record<string, unknown>
         });
         
         if (data) {
@@ -60,7 +58,6 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
 
     fetchMessages();
 
-    // Set up realtime subscription
     const channel = supabase
       .channel('public:messages')
       .on(
@@ -74,7 +71,6 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Only add messages related to this conversation
           if (
             (newMsg.sender_id === user.id && newMsg.recipient_id === otherUser.id) ||
             (newMsg.sender_id === otherUser.id && newMsg.recipient_id === user.id)
@@ -91,13 +87,12 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
             
             setMessages((prev) => [...prev, formattedMessage]);
             
-            // Mark as read if it's a message to the current user
             if (newMsg.recipient_id === user.id) {
               await supabase.functions.invoke('ride-chat', {
                 body: { 
                   method: 'mark-read', 
                   messageId: newMsg.id 
-                } as Record<string, string>
+                } as Record<string, unknown>
               });
             }
           }
@@ -111,7 +106,6 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
   }, [user, ride.id, otherUser.id]);
 
   useEffect(() => {
-    // Scroll to bottom when new messages come in
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -137,7 +131,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
           recipientId: otherUser.id,
           rideId: ride.id,
           content: newMessage.trim()
-        } as Record<string, any>
+        } as Record<string, unknown>
       });
       
       setNewMessage("");
