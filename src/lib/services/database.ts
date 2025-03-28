@@ -361,21 +361,13 @@ export const databaseService = {
   // Function that handles messages
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
-      // Define a properly typed parameter object
-      type ChatFunctionParams = {
-        method: 'list';
-        userId: string;
-        rideId: string;
-      };
-      
-      const params: ChatFunctionParams = {
-        method: 'list',
-        userId: userId,
-        rideId: rideId
-      };
-      
+      // Fix for TypeScript error by using a Record to define function parameters
       const response = await supabase.functions.invoke('ride-chat', {
-        body: params
+        body: {
+          method: 'list',
+          userId: userId,
+          rideId: rideId
+        } as Record<string, string>
       });
       
       if (response.error) {

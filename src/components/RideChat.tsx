@@ -29,8 +29,13 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
+        // Fixed type for function parameters
         const { data } = await supabase.functions.invoke('ride-chat', {
-          body: { method: 'list', userId: user.id, rideId: ride.id }
+          body: { 
+            method: 'list', 
+            userId: user.id, 
+            rideId: ride.id 
+          } as Record<string, string>
         });
         
         if (data) {
@@ -92,7 +97,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
                 body: { 
                   method: 'mark-read', 
                   messageId: newMsg.id 
-                }
+                } as Record<string, string>
               });
             }
           }
@@ -132,7 +137,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
           recipientId: otherUser.id,
           rideId: ride.id,
           content: newMessage.trim()
-        }
+        } as Record<string, any>
       });
       
       setNewMessage("");
