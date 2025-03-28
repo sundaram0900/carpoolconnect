@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog,
@@ -23,7 +24,6 @@ import { formatPrice } from "@/lib/utils";
 import { Loader2, CheckCircle, AlertCircle, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import PaymentOptions from "./PaymentOptions";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
 import { databaseService } from "@/lib/services/database";
 
