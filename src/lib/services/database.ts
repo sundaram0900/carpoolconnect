@@ -362,7 +362,7 @@ export const databaseService = {
     try {
       // Using Supabase Edge Function instead of direct table access
       const response = await supabase.functions.invoke('ride-chat', {
-        body: { method: 'list', rideId, userId }
+        body: { method: 'list', userId, rideId }
       });
       
       if (response.error) {
