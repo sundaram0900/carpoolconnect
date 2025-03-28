@@ -357,19 +357,19 @@ export const databaseService = {
     }
   },
   
-  // Function that handles messages - fixed type issue
+  // Function that handles messages
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
       // Using Supabase Edge Function instead of direct table access
-      const { data, error } = await supabase.functions.invoke('ride-chat', {
+      const response = await supabase.functions.invoke('ride-chat', {
         body: { method: 'list', rideId, userId }
       });
       
-      if (error) {
-        throw error;
+      if (response.error) {
+        throw response.error;
       }
       
-      return data || [];
+      return response.data || [];
     } catch (error: any) {
       console.error("Error fetching messages:", error.message);
       toast.error("Failed to fetch messages");
