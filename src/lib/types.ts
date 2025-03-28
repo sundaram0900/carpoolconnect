@@ -1,4 +1,3 @@
-
 export type Ride = {
   id: string;
   driver: User;
@@ -99,4 +98,37 @@ export type BookingFormData = {
   contactPhone: string;
   notes: string;
   paymentMethod?: string;
+};
+
+export type Message = {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  rideId: string;
+  content: string;
+  timestamp: string;
+  read: boolean;
+};
+
+export type OTP = {
+  id: string;
+  userId: string;
+  rideId: string;
+  code: string;
+  expiresAt: string;
+  verified: boolean;
+};
+
+export type Receipt = {
+  id: string;
+  bookingId: string;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  transactionId?: string;
+  createdAt: string;
+  booking?: {
+    ride: Ride;
+    user: User;
+  };
 };

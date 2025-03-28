@@ -27,6 +27,7 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
       <RideDetailsModal 
         ride={ride} 
         trigger={null} 
+        isOpenByDefault={isModalOpen}
       />
     </div>
   );

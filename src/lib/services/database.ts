@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -44,6 +45,30 @@ export const databaseService = {
     } catch (error: any) {
       console.error("Error fetching user rides:", error.message);
       toast.error("Failed to fetch your rides");
+      return [];
+    }
+  },
+  
+  async fetchAllAvailableRides(): Promise<Ride[]> {
+    try {
+      const { data, error } = await supabase
+        .from('rides')
+        .select(`
+          *,
+          driver:driver_id(*)
+        `)
+        .eq('status', 'scheduled')
+        .gt('available_seats', 0)
+        .order('date', { ascending: true });
+        
+      if (error) {
+        throw error;
+      }
+      
+      return data.map((ride: any) => mapDbRideToRide(ride));
+    } catch (error: any) {
+      console.error("Error fetching available rides:", error.message);
+      toast.error("Failed to fetch available rides");
       return [];
     }
   },
@@ -107,6 +132,25 @@ export const databaseService = {
       console.error("Error creating ride:", error.message);
       toast.error("Failed to create ride");
       return null;
+    }
+  },
+  
+  async updateRideStatus(rideId: string, status: RideStatus): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('rides')
+        .update({ status })
+        .eq('id', rideId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating ride status:", error.message);
+      toast.error("Failed to update ride status");
+      return false;
     }
   },
   
@@ -297,26 +341,16 @@ export const databaseService = {
   // Receipts
   async fetchUserReceipts(userId: string): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select(`
-          *,
-          booking:booking_id(
-            *,
-            ride:ride_id(
-              *,
-              driver:driver_id(*)
-            ),
-            user:user_id(*)
-          )
-        `)
-        .eq('booking.user_id', userId);
+      // Use raw SQL query to join tables properly
+      const { data, error } = await supabase.rpc('get_user_receipts', {
+        user_id_param: userId
+      });
         
       if (error) {
         throw error;
       }
       
-      return data;
+      return data || [];
     } catch (error: any) {
       console.error("Error fetching user receipts:", error.message);
       toast.error("Failed to fetch your receipts");
