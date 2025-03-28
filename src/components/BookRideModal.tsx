@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Dialog,
   DialogContent,
@@ -26,6 +25,7 @@ import { toast } from "sonner";
 import PaymentOptions from "./PaymentOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
+import { databaseService } from "@/lib/services/database";
 
 interface BookRideModalProps {
   ride: Ride;
@@ -42,17 +42,40 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingStatus, setBookingStatus] = useState<"idle" | "success" | "error">("idle");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [isAlreadyBooked, setIsAlreadyBooked] = useState<boolean>(false);
   const { user } = useAuth();
 
   const totalPrice = parseInt(seats) * ride.price;
   const serviceFee = Math.round(totalPrice * 0.05); // 5% service fee
   const finalPrice = totalPrice + serviceFee;
   
+  // Check if user has already booked this ride when the modal opens
+  useEffect(() => {
+    const checkExistingBooking = async () => {
+      if (user && ride.id && isOpen) {
+        const hasBooking = await databaseService.checkExistingBooking(ride.id, user.id);
+        setIsAlreadyBooked(hasBooking);
+        
+        if (hasBooking) {
+          toast.info("You have already booked this ride");
+        }
+      }
+    };
+    
+    checkExistingBooking();
+  }, [user, ride.id, isOpen]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
       toast.error("You must be logged in to book a ride");
+      return;
+    }
+    
+    if (isAlreadyBooked) {
+      toast.error("You have already booked this ride");
+      setBookingStatus("error");
       return;
     }
     
@@ -68,36 +91,24 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     try {
       setIsSubmitting(true);
       
-      // Insert the booking into Supabase
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          ride_id: ride.id,
-          user_id: user.id,
-          seats: parseInt(seats),
-          contact_phone: contactPhone,
-          notes: notes || null,
-          payment_method: paymentMethod
-        })
-        .select()
-        .single();
+      // Check again for existing booking right before submitting
+      const hasExistingBooking = await databaseService.checkExistingBooking(ride.id, user.id);
       
-      if (bookingError) {
-        throw bookingError;
+      if (hasExistingBooking) {
+        setIsAlreadyBooked(true);
+        throw new Error("You have already booked this ride");
       }
       
-      // Call the onBook function as well (which might have additional logic)
-      let success = true;
-      try {
-        success = await onBook({
-          seats: parseInt(seats),
-          contactPhone,
-          notes,
-          paymentMethod
-        });
-      } catch (error) {
-        console.error("Error in booking callback:", error);
-      }
+      // If no existing booking, proceed with creating a new booking
+      const bookingData: BookingFormData = {
+        seats: parseInt(seats),
+        contactPhone,
+        notes,
+        paymentMethod
+      };
+      
+      // Call the onBook function which has the callback logic
+      const success = await onBook(bookingData);
       
       setBookingStatus(success ? "success" : "error");
       
@@ -122,6 +133,7 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     setPaymentMethod("upi");
     setBookingStatus("idle");
     setCurrentStep(1);
+    setIsAlreadyBooked(false);
     onClose();
   };
 
@@ -154,11 +166,15 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <DialogTitle className="text-xl mb-2">Booking Failed</DialogTitle>
             <DialogDescription className="mb-6">
-              We couldn't complete your booking. Please try again or contact support.
+              {isAlreadyBooked 
+                ? "You have already booked this ride." 
+                : "We couldn't complete your booking. Please try again or contact support."}
             </DialogDescription>
             <div className="flex justify-center gap-3">
               <Button variant="outline" onClick={resetForm}>Cancel</Button>
-              <Button onClick={() => setBookingStatus("idle")}>Try Again</Button>
+              {!isAlreadyBooked && (
+                <Button onClick={() => setBookingStatus("idle")}>Try Again</Button>
+              )}
             </div>
           </div>
         ) : (

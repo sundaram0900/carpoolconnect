@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -265,8 +266,33 @@ export const databaseService = {
   },
   
   // Booking and payments
+  async checkExistingBooking(rideId: string, userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('ride_id', rideId)
+        .eq('user_id', userId)
+        .single();
+        
+      // If data exists, the user has already booked this ride
+      return !!data;
+    } catch (error) {
+      // No data found means no existing booking (this is not an error)
+      return false;
+    }
+  },
+  
   async bookRide(rideId: string, userId: string, bookingData: BookingFormData): Promise<boolean> {
     try {
+      // First check if a booking already exists
+      const hasExistingBooking = await this.checkExistingBooking(rideId, userId);
+      
+      if (hasExistingBooking) {
+        toast.error("You have already booked this ride");
+        return false;
+      }
+      
       const { data, error } = await supabase
         .from('bookings')
         .insert({
