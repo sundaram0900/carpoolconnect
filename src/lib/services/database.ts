@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -357,10 +358,10 @@ export const databaseService = {
     }
   },
   
-  // Function that handles messages table - fixed type issue
-  async fetchMessages(rideId: string, userId: string) {
+  // Function that handles messages - fixed type issue
+  async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
-      // Using functions API instead of direct table access for better security
+      // Using functions API instead of direct table access
       const { data, error } = await supabase.functions.invoke('ride-chat', {
         body: { method: 'list', rideId, userId }
       });
@@ -369,7 +370,7 @@ export const databaseService = {
         throw error;
       }
       
-      return data;
+      return data || [];
     } catch (error: any) {
       console.error("Error fetching messages:", error.message);
       toast.error("Failed to fetch messages");
