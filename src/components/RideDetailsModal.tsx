@@ -15,13 +15,14 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Ride, BookingFormData } from "@/lib/types";
-import { formatDate, formatTime, formatPrice, getAvatarUrl, calculateDistance, calculateDuration, bookRide } from "@/lib/utils";
+import { formatDate, formatTime, formatPrice, getAvatarUrl, calculateDistance, calculateDuration } from "@/lib/utils";
 import { useAuth } from "@/lib/context/AuthContext";
-import { Calendar, Clock, MapPin, Users, IndianRupee, Route, ShieldCheck, Car, Info } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, IndianRupee, Route, Car, Info } from "lucide-react";
 import DriverDetails from "./DriverDetails";
 import BookRideModal from "./BookRideModal";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useBookRide } from "@/hooks/useBookRide";
 
 interface RideDetailsModalProps {
   ride: Ride;
@@ -35,6 +36,7 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { bookRide, isBooking } = useBookRide(ride.id);
   
   const distance = calculateDistance(ride.startLocation, ride.endLocation);
   const duration = calculateDuration(distance);
@@ -56,12 +58,12 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
     setIsBookingModalOpen(true);
   };
 
-  const handleBookRide = async (formData: BookingFormData): Promise<boolean> => {
-    if (!user) return false;
+  const handleBookRide = async (formData: BookingFormData): Promise<{ success: boolean, bookingId?: string }> => {
+    if (!user) return { success: false };
     
-    const { success } = await bookRide(ride.id, user.id, formData.seats);
+    const result = await bookRide(formData);
     
-    if (success) {
+    if (result.success) {
       setIsBookingModalOpen(false);
       toast.success("Ride booked successfully! It will appear in your profile.");
       setTimeout(() => {
@@ -73,7 +75,7 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
       }, 1500);
     }
     
-    return success;
+    return result;
   };
 
   return (
