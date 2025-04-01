@@ -16,12 +16,17 @@ const ReceiptDownload = ({ receiptId, receiptNumber }: ReceiptDownloadProps) => 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
+      console.log("Starting download for receipt:", receiptId);
+      
       const pdfBlob = await databaseService.downloadReceipt(receiptId);
       
       if (!pdfBlob) {
+        console.error("No PDF blob returned");
         toast.error("Failed to download receipt");
         return;
       }
+      
+      console.log("PDF blob received, creating download link");
       
       // Create a download link
       const url = window.URL.createObjectURL(pdfBlob);
@@ -35,6 +40,7 @@ const ReceiptDownload = ({ receiptId, receiptNumber }: ReceiptDownloadProps) => 
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
       toast.success("Receipt downloaded successfully");
+      console.log("Download complete");
     } catch (error) {
       console.error("Error downloading receipt:", error);
       toast.error("Failed to download receipt");

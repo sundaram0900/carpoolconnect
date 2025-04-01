@@ -493,13 +493,23 @@ export const databaseService = {
   
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
+      console.log("Downloading receipt with ID:", receiptId);
+      
       const { data, error } = await supabase.functions.invoke('download-receipt', {
         body: { receiptId }
       });
         
       if (error) {
+        console.error("Error from download-receipt function:", error);
         throw error;
       }
+      
+      if (!data || !data.pdf) {
+        console.error("No PDF data returned from the function");
+        throw new Error("No PDF data returned");
+      }
+      
+      console.log("PDF data received, converting to Blob...");
       
       const base64Response = data.pdf;
       const binaryString = window.atob(base64Response);

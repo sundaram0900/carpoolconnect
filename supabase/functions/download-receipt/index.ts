@@ -19,19 +19,28 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
+    console.log("SUPABASE_URL exists:", !!supabaseUrl);
+    console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!supabaseServiceKey);
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json();
-    const { receiptId } = body;
-    
-    console.log("Download receipt request:", { receiptId });
+    // Parse the request body
+    let receiptId;
+    try {
+      const body = await req.json();
+      receiptId = body.receiptId;
+      console.log("Receipt ID from request:", receiptId);
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      throw new Error("Invalid request body");
+    }
     
     if (!receiptId) {
       throw new Error("Receipt ID is required");
     }
     
     // Fetch receipt data with all necessary joins
-    console.log("Fetching receipt details");
+    console.log("Fetching receipt details for ID:", receiptId);
     const { data: receipt, error: receiptError } = await supabase.rpc("get_receipt_details", {
       receipt_id_param: receiptId,
     });
@@ -47,13 +56,12 @@ serve(async (req) => {
     }
     
     const receiptData = receipt[0];
-    console.log("Receipt data fetched successfully");
+    console.log("Receipt data fetched successfully:", receiptData.id);
     
     const formattedDate = format(new Date(receiptData.created_at), "yyyy-MM-dd");
     const receiptNumber = receiptData.id.substring(0, 8).toUpperCase();
     
     // Generate a PDF as a string (in a real implementation, you'd use a PDF library)
-    // Here we're just creating a simple HTML-like structure
     const pdfContent = `
       <html>
         <head>
@@ -143,7 +151,7 @@ serve(async (req) => {
       </html>
     `;
 
-    console.log("PDF content generated");
+    console.log("PDF content generated successfully");
     
     // In a real implementation, convert the HTML to a PDF
     // For now, we'll just return the HTML encoded as base64
@@ -151,7 +159,8 @@ serve(async (req) => {
     const pdfBytes = encoder.encode(pdfContent);
     const base64Pdf = btoa(String.fromCharCode(...pdfBytes));
     
-    console.log("Sending response");
+    console.log("Base64 PDF generated successfully, length:", base64Pdf.length);
+    console.log("Sending response...");
     
     return new Response(
       JSON.stringify({ 
