@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDate, formatTime, formatPrice, getAvatarUrl } from "@/lib/utils";
 import DriverDetails from "./DriverDetails";
+import RideBookingsList from "./RideBookingsList";
 
 interface RideDetailsModalTabsProps {
   ride: Ride;
@@ -108,7 +109,7 @@ const RideDetailsModalTabs = ({
 
   return (
     <Tabs defaultValue={defaultTab} value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="grid grid-cols-4 mb-4">
+      <TabsList className="grid grid-cols-5 mb-4">
         <TabsTrigger value="details">
           <Info className="h-4 w-4 mr-2" />
           Details
@@ -117,6 +118,12 @@ const RideDetailsModalTabs = ({
           <Info className="h-4 w-4 mr-2" />
           Driver
         </TabsTrigger>
+        {isDriver && (
+          <TabsTrigger value="bookings">
+            <Users className="h-4 w-4 mr-2" />
+            Bookings
+          </TabsTrigger>
+        )}
         {(isDriver || isPassenger) && (
           <TabsTrigger value="verify">
             <ShieldCheck className="h-4 w-4 mr-2" />
@@ -230,7 +237,7 @@ const RideDetailsModalTabs = ({
                 </div>
                 
                 <div className="pt-4">
-                  {!isDriver && !isPassenger && ride.status === 'scheduled' && (
+                  {!isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0 && (
                     <Button className="w-full" onClick={onBookClick}>
                       Book This Ride
                     </Button>
@@ -275,13 +282,19 @@ const RideDetailsModalTabs = ({
         <DriverDetails driver={ride.driver} ride={ride} />
               
               <div className="mt-6">
-                {!isDriver && !isPassenger && ride.status === 'scheduled' && (
+                {!isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0 && (
                   <Button className="w-full" onClick={onBookClick}>
                     Book This Ride
                   </Button>
                 )}
               </div>
       </TabsContent>
+      
+      {isDriver && (
+        <TabsContent value="bookings">
+          <RideBookingsList rideId={ride.id} />
+        </TabsContent>
+      )}
       
       {(isDriver || isPassenger) && (
         <TabsContent value="verify">

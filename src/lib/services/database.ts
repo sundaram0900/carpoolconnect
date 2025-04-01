@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -22,6 +21,32 @@ export const databaseService = {
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
       return null;
+    }
+  },
+  
+  async updateUserProfile(userId: string, profileData: Partial<User>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileData.name,
+          phone: profileData.phone,
+          bio: profileData.bio,
+          address: profileData.address,
+          city: profileData.city,
+          zip_code: profileData.zipCode
+        })
+        .eq('id', userId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating user profile:", error.message);
+      toast.error("Failed to update profile");
+      return false;
     }
   },
   
@@ -154,6 +179,40 @@ export const databaseService = {
     }
   },
   
+  async updateRideSeats(rideId: string, seatsBooked: number): Promise<boolean> {
+    try {
+      const { data: ride, error: fetchError } = await supabase
+        .from('rides')
+        .select('available_seats')
+        .eq('id', rideId)
+        .single();
+        
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      const newAvailableSeats = ride.available_seats - seatsBooked;
+      
+      const { error } = await supabase
+        .from('rides')
+        .update({ 
+          available_seats: newAvailableSeats,
+          status: newAvailableSeats <= 0 ? 'booked' : undefined
+        })
+        .eq('id', rideId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating ride seats:", error.message);
+      toast.error("Failed to update ride seats");
+      return false;
+    }
+  },
+  
   // Ride requests
   async fetchUserRideRequests(userId: string): Promise<RideRequest[]> {
     try {
@@ -275,17 +334,14 @@ export const databaseService = {
         .eq('user_id', userId)
         .single();
         
-      // If data exists, the user has already booked this ride
       return !!data;
     } catch (error) {
-      // No data found means no existing booking (this is not an error)
       return false;
     }
   },
   
   async bookRide(rideId: string, userId: string, bookingData: BookingFormData): Promise<boolean> {
     try {
-      // First check if a booking already exists
       const hasExistingBooking = await this.checkExistingBooking(rideId, userId);
       
       if (hasExistingBooking) {
@@ -306,6 +362,21 @@ export const databaseService = {
         
       if (error) {
         throw error;
+      }
+      
+      const updatedSeats = await this.updateRideSeats(rideId, bookingData.seats);
+      
+      if (!updatedSeats) {
+        throw new Error("Failed to update ride seats");
+      }
+      
+      const { error: updateError } = await supabase.rpc('add_user_to_booked_by', {
+        ride_id_param: rideId,
+        user_id_param: userId
+      });
+      
+      if (updateError) {
+        console.error("Error adding user to booked_by:", updateError);
       }
       
       return true;
@@ -363,10 +434,8 @@ export const databaseService = {
     }
   },
   
-  // Receipts
   async fetchUserReceipts(userId: string): Promise<any[]> {
     try {
-      // Use raw SQL query to join tables properly
       const { data, error } = await supabase.rpc('get_user_receipts', {
         user_id_param: userId
       });
@@ -383,10 +452,35 @@ export const databaseService = {
     }
   },
   
-  // Function that handles messages
+  async downloadReceipt(receiptId: string): Promise<Blob | null> {
+    try {
+      const { data, error } = await supabase.functions.invoke('download-receipt', {
+        body: {
+          receiptId
+        } as Record<string, unknown>
+      });
+        
+      if (error) {
+        throw error;
+      }
+      
+      const base64Response = data.pdf;
+      const binaryString = window.atob(base64Response);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      return new Blob([bytes], { type: 'application/pdf' });
+    } catch (error: any) {
+      console.error("Error downloading receipt:", error.message);
+      toast.error("Failed to download receipt");
+      return null;
+    }
+  },
+  
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
-      // Fix the TypeScript error by properly typing the parameters
       const response = await supabase.functions.invoke('ride-chat', {
         body: {
           method: 'list',
@@ -407,7 +501,6 @@ export const databaseService = {
     }
   },
   
-  // Helper method for Profile page to map ride objects
   mapDbRideToRide(ride: any): Ride | null {
     return mapDbRideToRide(ride);
   }
