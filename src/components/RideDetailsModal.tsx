@@ -56,10 +56,10 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
     setIsBookingModalOpen(true);
   };
 
-  const handleBookRide = async (formData: BookingFormData) => {
+  const handleBookRide = async (formData: BookingFormData): Promise<boolean> => {
     if (!user) return false;
     
-    const success = await bookRide(ride.id, user.id, formData.seats);
+    const { success } = await bookRide(ride.id, user.id, formData.seats);
     
     if (success) {
       setIsBookingModalOpen(false);
