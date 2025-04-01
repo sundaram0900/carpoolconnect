@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ const AuthForm = () => {
   const [activeTab, setActiveTab] = useState("login");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [signupError, setSignupError] = useState<string | null>(null);
+  const [loginAttempted, setLoginAttempted] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -28,8 +29,15 @@ const AuthForm = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupUsername, setSignupUsername] = useState("");
   
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup, loginWithGoogle, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // If login was attempted and authLoading becomes false, check for loginError
+    if (loginAttempted && !authLoading && !loginError) {
+      navigate("/profile");
+    }
+  }, [loginAttempted, authLoading, loginError, navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +55,11 @@ const AuthForm = () => {
     
     try {
       setIsLoggingIn(true);
+      setLoginAttempted(true);
+      
       const success = await login(loginEmail, loginPassword, loginUsername);
       
-      if (success) {
-        navigate("/profile");
-      } else {
+      if (!success) {
         setLoginError("Invalid credentials. Please try again.");
       }
     } catch (error) {
@@ -96,7 +104,10 @@ const AuthForm = () => {
       const success = await signup(signupName, signupEmail, signupPassword, signupUsername);
       
       if (success) {
-        navigate("/profile");
+        toast.success("Account created! You'll be redirected shortly.");
+        setTimeout(() => {
+          navigate("/profile");
+        }, 1500);
       } else {
         setSignupError("Failed to create account. Please try again.");
       }
@@ -111,11 +122,10 @@ const AuthForm = () => {
   const handleGoogleLogin = async () => {
     try {
       setIsGoogleLogin(true);
-      const success = await loginWithGoogle();
-      
-      if (success) {
-        navigate("/profile");
-      }
+      await loginWithGoogle();
+      // Navigation happens in the auth callback
+    } catch (error) {
+      console.error("Google login error:", error);
     } finally {
       setIsGoogleLogin(false);
     }

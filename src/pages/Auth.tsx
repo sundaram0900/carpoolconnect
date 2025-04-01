@@ -1,16 +1,21 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/context/AuthContext";
 import AuthForm from "@/components/AuthForm";
 import { motion } from "framer-motion";
 import { Shield, Zap, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Auth = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [pageLoaded, setPageLoaded] = useState(false);
 
   useEffect(() => {
+    // Mark page as loaded after initial render
+    setPageLoaded(true);
+    
     if (!isLoading && isAuthenticated) {
       navigate("/profile");
     }
@@ -74,14 +79,24 @@ const Auth = () => {
             </div>
           </motion.div>
           
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="glass-card rounded-xl p-8 w-full max-w-md"
-          >
-            <AuthForm />
-          </motion.div>
+          {isLoading && !pageLoaded ? (
+            <div className="glass-card rounded-xl p-8 w-full max-w-md">
+              <Skeleton className="h-12 w-full mb-6" />
+              <Skeleton className="h-10 w-full mb-4" />
+              <Skeleton className="h-10 w-full mb-4" />
+              <Skeleton className="h-10 w-full mb-4" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="glass-card rounded-xl p-8 w-full max-w-md"
+            >
+              <AuthForm />
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

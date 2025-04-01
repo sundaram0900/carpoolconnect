@@ -456,8 +456,8 @@ export const databaseService = {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
         body: {
-          receiptId
-        }
+          receiptId: receiptId
+        } as { receiptId: string }
       });
         
       if (error) {
@@ -484,9 +484,9 @@ export const databaseService = {
       const response = await supabase.functions.invoke('ride-chat', {
         body: {
           method: 'list',
-          userId,
-          rideId
-        }
+          userId: userId,
+          rideId: rideId
+        } as { method: string; userId: string; rideId: string }
       });
       
       if (response.error) {

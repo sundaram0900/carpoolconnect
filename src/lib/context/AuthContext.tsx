@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { User } from "@/lib/types";
@@ -29,55 +28,64 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     // Check for active session on mount
-    setIsLoading(true);
-    
     const checkSession = async () => {
       try {
+        console.log("Checking for active session...");
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error("Error fetching session:", error.message);
+          setIsLoading(false);
           return;
         }
         
-        if (session) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (profileError) {
-            console.error("Error fetching profile:", profileError.message);
-            return;
-          }
+        if (!session) {
+          console.log("No active session found");
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Active session found, fetching profile...");
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
           
-          if (profile) {
-            setUser({
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              username: profile.username || undefined,
-              avatar: profile.avatar || undefined,
-              phone: profile.phone || undefined,
-              rating: profile.rating || 5.0,
-              reviewCount: profile.review_count || 0,
-              verifiedDriver: profile.verified_driver || false,
-              bio: profile.bio || undefined,
-              address: profile.address || undefined,
-              city: profile.city || undefined,
-              zipCode: profile.zip_code || undefined,
-              createdAt: profile.created_at
-            });
-          }
+        if (profileError) {
+          console.error("Error fetching profile:", profileError.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (profile) {
+          console.log("Profile fetched successfully");
+          setUser({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            username: profile.username || undefined,
+            avatar: profile.avatar || undefined,
+            phone: profile.phone || undefined,
+            rating: profile.rating || 5.0,
+            reviewCount: profile.review_count || 0,
+            verifiedDriver: profile.verified_driver || false,
+            bio: profile.bio || undefined,
+            address: profile.address || undefined,
+            city: profile.city || undefined,
+            zipCode: profile.zip_code || undefined,
+            createdAt: profile.created_at
+          });
         }
       } catch (err) {
         console.error("Session check error:", err);
       } finally {
         setIsLoading(false);
+        setAuthInitialized(true);
       }
     };
     
@@ -86,38 +94,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change:", event);
+        
         if (event === 'SIGNED_IN' && session) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (profileError) {
-            console.error("Error fetching profile:", profileError.message);
-            return;
-          }
+          setIsLoading(true);
           
-          if (profile) {
-            setUser({
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              username: profile.username || undefined,
-              avatar: profile.avatar || undefined,
-              phone: profile.phone || undefined,
-              rating: profile.rating || 5.0,
-              reviewCount: profile.review_count || 0,
-              verifiedDriver: profile.verified_driver || false,
-              bio: profile.bio || undefined,
-              address: profile.address || undefined,
-              city: profile.city || undefined,
-              zipCode: profile.zip_code || undefined,
-              createdAt: profile.created_at
-            });
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (profileError) {
+              console.error("Error fetching profile:", profileError.message);
+              return;
+            }
+            
+            if (profile) {
+              setUser({
+                id: profile.id,
+                name: profile.name,
+                email: profile.email,
+                username: profile.username || undefined,
+                avatar: profile.avatar || undefined,
+                phone: profile.phone || undefined,
+                rating: profile.rating || 5.0,
+                reviewCount: profile.review_count || 0,
+                verifiedDriver: profile.verified_driver || false,
+                bio: profile.bio || undefined,
+                address: profile.address || undefined,
+                city: profile.city || undefined,
+                zipCode: profile.zip_code || undefined,
+                createdAt: profile.created_at
+              });
+            }
+          } catch (error) {
+            console.error("Profile fetch error:", error);
+          } finally {
+            setIsLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          setIsLoading(false);
         }
       }
     );
@@ -130,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string, username?: string) => {
     try {
       setIsLoading(true);
+      console.log("Attempting login with", email ? "email" : "username");
       
       let authResponse;
       
@@ -139,10 +159,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email,
           password,
         });
+        
+        if (authResponse.error) {
+          console.error("Email login error:", authResponse.error.message);
+        } else {
+          console.log("Email login successful");
+        }
       }
       
       // If login with email fails or username is provided, try to find the email with the username
       if ((authResponse?.error || !email) && username) {
+        console.log("Attempting login with username:", username);
         // Find the user with the given username
         const { data: userProfile, error: userError } = await supabase
           .from('profiles')
@@ -157,15 +184,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         if (userProfile) {
+          console.log("Username found, attempting login with associated email");
           authResponse = await supabase.auth.signInWithPassword({
             email: userProfile.email,
             password,
           });
+          
+          if (authResponse.error) {
+            console.error("Username login error:", authResponse.error.message);
+          } else {
+            console.log("Username login successful");
+          }
         }
       }
       
       if (authResponse?.error) {
-        throw authResponse.error;
+        toast.error(`Login failed: ${authResponse.error.message}`);
+        return false;
       }
       
       toast.success("Successfully logged in!");
@@ -316,12 +351,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const isAuthenticated = !!user;
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
-        isLoading,
+        isAuthenticated,
+        isLoading: isLoading || !authInitialized,
         login,
         signup,
         loginWithGoogle,
