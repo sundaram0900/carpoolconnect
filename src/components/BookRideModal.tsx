@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog,
@@ -26,12 +25,13 @@ import { toast } from "sonner";
 import PaymentOptions from "./PaymentOptions";
 import { useAuth } from "@/lib/context/AuthContext";
 import { databaseService } from "@/lib/services/database";
+import BookingSuccessCard from "./BookingSuccessCard";
 
 interface BookRideModalProps {
   ride: Ride;
   isOpen: boolean;
   onClose: () => void;
-  onBook: (formData: BookingFormData) => Promise<boolean>;
+  onBook: (formData: BookingFormData) => Promise<{success: boolean, bookingId?: string}>;
 }
 
 const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) => {
@@ -43,13 +43,19 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
   const [bookingStatus, setBookingStatus] = useState<"idle" | "success" | "error">("idle");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [isAlreadyBooked, setIsAlreadyBooked] = useState<boolean>(false);
+  const [bookingId, setBookingId] = useState<string>("");
   const { user } = useAuth();
 
   const totalPrice = parseInt(seats) * ride.price;
   const serviceFee = Math.round(totalPrice * 0.05); // 5% service fee
   const finalPrice = totalPrice + serviceFee;
   
-  // Check if user has already booked this ride when the modal opens
+  useEffect(() => {
+    if (user?.phone) {
+      setContactPhone(user.phone);
+    }
+  }, [user]);
+  
   useEffect(() => {
     const checkExistingBooking = async () => {
       if (user && ride.id && isOpen) {
@@ -62,7 +68,9 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
       }
     };
     
-    checkExistingBooking();
+    if (isOpen) {
+      checkExistingBooking();
+    }
   }, [user, ride.id, isOpen]);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,7 +99,6 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     try {
       setIsSubmitting(true);
       
-      // Check again for existing booking right before submitting
       const hasExistingBooking = await databaseService.checkExistingBooking(ride.id, user.id);
       
       if (hasExistingBooking) {
@@ -99,7 +106,6 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
         throw new Error("You have already booked this ride");
       }
       
-      // If no existing booking, proceed with creating a new booking
       const bookingData: BookingFormData = {
         seats: parseInt(seats),
         contactPhone,
@@ -107,14 +113,13 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
         paymentMethod
       };
       
-      // Call the onBook function which has the callback logic
-      const success = await onBook(bookingData);
+      const result = await onBook(bookingData);
       
-      setBookingStatus(success ? "success" : "error");
-      
-      if (success) {
-        toast.success("Ride booked successfully!");
+      if (result.success && result.bookingId) {
+        setBookingId(result.bookingId);
+        setBookingStatus("success");
       } else {
+        setBookingStatus("error");
         toast.error("Failed to book ride. Please try again.");
       }
     } catch (error: any) {
@@ -134,6 +139,7 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     setBookingStatus("idle");
     setCurrentStep(1);
     setIsAlreadyBooked(false);
+    setBookingId("");
     onClose();
   };
 
@@ -153,14 +159,7 @@ const BookRideModal = ({ ride, isOpen, onClose, onBook }: BookRideModalProps) =>
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
       <DialogContent className="sm:max-w-md">
         {bookingStatus === "success" ? (
-          <div className="py-6 text-center">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <DialogTitle className="text-xl mb-2">Booking Confirmed!</DialogTitle>
-            <DialogDescription className="mb-6">
-              Your ride has been booked successfully. The driver will contact you shortly.
-            </DialogDescription>
-            <Button onClick={resetForm}>Done</Button>
-          </div>
+          <BookingSuccessCard bookingId={bookingId} rideId={ride.id} />
         ) : bookingStatus === "error" ? (
           <div className="py-6 text-center">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />

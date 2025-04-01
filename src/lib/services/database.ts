@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -379,6 +380,25 @@ export const databaseService = {
         console.error("Error adding user to booked_by:", updateError);
       }
       
+      // Auto-generate receipt after successful booking
+      try {
+        const { data: bookingRecord } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('ride_id', rideId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (bookingRecord) {
+          await this.generateReceipt(bookingRecord.id);
+        }
+      } catch (receiptError) {
+        console.error("Failed to auto-generate receipt:", receiptError);
+        // Continue even if receipt generation fails
+      }
+      
       return true;
     } catch (error: any) {
       console.error("Error booking ride:", error.message);
@@ -398,7 +418,8 @@ export const databaseService = {
             driver:driver_id(*)
           )
         `)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
         
       if (error) {
         throw error;
@@ -420,7 +441,8 @@ export const databaseService = {
           *,
           user:user_id(*)
         `)
-        .eq('ride_id', rideId);
+        .eq('ride_id', rideId)
+        .order('created_at', { ascending: false });
         
       if (error) {
         throw error;
@@ -452,12 +474,28 @@ export const databaseService = {
     }
   },
   
+  async generateReceipt(bookingId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-receipt', {
+        body: { bookingId }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data?.receipt || null;
+    } catch (error: any) {
+      console.error("Error generating receipt:", error.message);
+      toast.error("Failed to generate receipt");
+      return null;
+    }
+  },
+  
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
-        body: {
-          receiptId
-        }
+        body: { receiptId }
       });
         
       if (error) {
@@ -482,11 +520,7 @@ export const databaseService = {
   async fetchMessages(rideId: string, userId: string): Promise<any[]> {
     try {
       const response = await supabase.functions.invoke('ride-chat', {
-        body: {
-          method: 'list',
-          userId,
-          rideId
-        }
+        body: { method: 'list', userId, rideId }
       });
       
       if (response.error) {

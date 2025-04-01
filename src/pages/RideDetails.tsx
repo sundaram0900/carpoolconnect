@@ -2,26 +2,32 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Ride } from "@/lib/types";
-import { fetchRides } from "@/lib/utils";
+import { databaseService } from "@/lib/services/database";
 import { Loader2 } from "lucide-react";
 import RideDetailsModal from "@/components/RideDetailsModal";
+import BookingSuccessCard from "@/components/BookingSuccessCard";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 
 const RideDetails = () => {
   const { rideId } = useParams<{ rideId: string }>();
   const navigate = useNavigate();
   const [ride, setRide] = useState<Ride | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const bookingSuccess = searchParams.get('booking_success') === 'true';
+  const bookingId = searchParams.get('booking_id') || '';
 
   useEffect(() => {
     const loadRideDetails = async () => {
+      if (!rideId) return;
+      
       try {
         setIsLoading(true);
-        const rides = await fetchRides();
-        const foundRide = rides.find(r => r.id === rideId);
+        const rideDetails = await databaseService.fetchRideById(rideId);
         
-        if (foundRide) {
-          setRide(foundRide);
+        if (rideDetails) {
+          setRide(rideDetails);
         } else {
           // If ride not found, navigate to not found page
           navigate("/not-found", { replace: true });
@@ -57,6 +63,12 @@ const RideDetails = () => {
           transition={{ duration: 0.5 }}
           className="max-w-3xl mx-auto"
         >
+          {bookingSuccess ? (
+            <div className="mb-8">
+              <BookingSuccessCard bookingId={bookingId} rideId={rideId || ''} source="page" />
+            </div>
+          ) : null}
+          
           {/* We're reusing the RideDetailsModal component but forcing it to be open */}
           <RideDetailsModal ride={ride} isOpenByDefault={true} />
         </motion.div>

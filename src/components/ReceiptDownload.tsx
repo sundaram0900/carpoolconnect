@@ -49,6 +49,7 @@ const ReceiptDownload = ({ receiptId, receiptNumber }: ReceiptDownloadProps) => 
       size="sm" 
       onClick={handleDownload}
       disabled={isDownloading}
+      className="flex items-center gap-1"
     >
       {isDownloading ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
