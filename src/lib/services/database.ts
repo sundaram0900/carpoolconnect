@@ -457,7 +457,7 @@ export const databaseService = {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
         body: {
           receiptId
-        } as Record<string, unknown>
+        }
       });
         
       if (error) {
@@ -486,7 +486,7 @@ export const databaseService = {
           method: 'list',
           userId,
           rideId
-        } as Record<string, unknown>
+        }
       });
       
       if (response.error) {
