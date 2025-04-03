@@ -17,6 +17,7 @@ const AuthForm = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [loginAttempted, setLoginAttempted] = useState(false);
+  const [redirectInProgress, setRedirectInProgress] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -29,15 +30,31 @@ const AuthForm = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupUsername, setSignupUsername] = useState("");
   
-  const { login, signup, loginWithGoogle, isLoading: authLoading } = useAuth();
+  const { login, signup, loginWithGoogle, isLoading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // If login was attempted and authLoading becomes false, check for loginError
-    if (loginAttempted && !authLoading && !loginError) {
-      navigate("/profile");
+    if (loginAttempted && !authLoading && !loginError && isAuthenticated) {
+      setRedirectInProgress(true);
+      // Add a small delay to show "Redirecting..." message
+      setTimeout(() => {
+        navigate("/profile");
+      }, 800);
     }
-  }, [loginAttempted, authLoading, loginError, navigate]);
+  }, [loginAttempted, authLoading, loginError, navigate, isAuthenticated]);
+
+  useEffect(() => {
+    // Redirect if authenticated
+    if (isAuthenticated && !redirectInProgress) {
+      setRedirectInProgress(true);
+      toast.success("Authenticated! Redirecting to profile...");
+      // Add a small delay to show "Redirecting..." message
+      setTimeout(() => {
+        navigate("/profile");
+      }, 800);
+    }
+  }, [isAuthenticated, navigate, redirectInProgress]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,11 +78,13 @@ const AuthForm = () => {
       
       if (!success) {
         setLoginError("Invalid credentials. Please try again.");
+        setIsLoggingIn(false);
       }
+      // Don't set isLoggingIn to false on success to keep the loading state until redirect
+      
     } catch (error) {
       console.error("Login error:", error);
       setLoginError("An error occurred while logging in");
-    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -104,17 +123,20 @@ const AuthForm = () => {
       const success = await signup(signupName, signupEmail, signupPassword, signupUsername);
       
       if (success) {
+        setSignupError(null);
         toast.success("Account created! You'll be redirected shortly.");
+        setRedirectInProgress(true);
+        // This delay allows the toast to be seen by the user
         setTimeout(() => {
           navigate("/profile");
         }, 1500);
       } else {
         setSignupError("Failed to create account. Please try again.");
+        setIsSigningUp(false);
       }
     } catch (error) {
       console.error("Signup error:", error);
       setSignupError("An error occurred while creating your account");
-    } finally {
       setIsSigningUp(false);
     }
   };
@@ -126,7 +148,6 @@ const AuthForm = () => {
       // Navigation happens in the auth callback
     } catch (error) {
       console.error("Google login error:", error);
-    } finally {
       setIsGoogleLogin(false);
     }
   };
@@ -148,6 +169,24 @@ const AuthForm = () => {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 }
   };
+  
+  if (redirectInProgress) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-xl font-medium">Redirecting to your profile...</p>
+      </div>
+    );
+  }
+  
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-xl font-medium">Checking authentication status...</p>
+      </div>
+    );
+  }
   
   return (
     <Tabs
@@ -190,6 +229,7 @@ const AuthForm = () => {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 className="pl-10"
+                autoComplete="email"
               />
             </div>
           </motion.div>
@@ -204,6 +244,7 @@ const AuthForm = () => {
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 className="pl-10"
+                autoComplete="username"
               />
             </div>
           </motion.div>
@@ -220,6 +261,7 @@ const AuthForm = () => {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="pl-10"
                 required
+                autoComplete="current-password"
               />
             </div>
           </motion.div>
@@ -304,6 +346,7 @@ const AuthForm = () => {
                 onChange={(e) => setSignupName(e.target.value)}
                 className="pl-10"
                 required
+                autoComplete="name"
               />
             </div>
           </motion.div>
@@ -320,6 +363,7 @@ const AuthForm = () => {
                 onChange={(e) => setSignupEmail(e.target.value)}
                 className="pl-10"
                 required
+                autoComplete="email"
               />
             </div>
           </motion.div>
@@ -335,6 +379,7 @@ const AuthForm = () => {
                 onChange={(e) => setSignupUsername(e.target.value)}
                 className="pl-10"
                 required
+                autoComplete="username"
               />
               <div className="text-xs text-muted-foreground mt-1">
                 This will be your public username on the platform
@@ -355,6 +400,7 @@ const AuthForm = () => {
                 className="pl-10"
                 minLength={8}
                 required
+                autoComplete="new-password"
               />
             </div>
             <p className="text-sm text-muted-foreground">
