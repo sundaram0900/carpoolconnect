@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { User } from "@/lib/types";
 import { databaseService } from "@/lib/services/database";
 import { toast } from "sonner";
+import ProfilePictureUpload from "./ProfilePictureUpload";
 
 interface UserProfileEditProps {
   user: User;
@@ -21,6 +22,11 @@ const UserProfileEdit = ({ user, onSave }: UserProfileEditProps) => {
   const [city, setCity] = useState(user.city || "");
   const [zipCode, setZipCode] = useState(user.zipCode || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User>(user);
+
+  const handleProfilePictureUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,13 +40,14 @@ const UserProfileEdit = ({ user, onSave }: UserProfileEditProps) => {
         address,
         city,
         zipCode,
+        avatar: currentUser.avatar
       };
 
       const success = await databaseService.updateUserProfile(user.id, updatedProfile);
 
       if (success) {
         toast.success("Profile updated successfully");
-        onSave({ ...user, ...updatedProfile });
+        onSave({ ...currentUser, ...updatedProfile });
       } else {
         toast.error("Failed to update profile");
       }
@@ -53,7 +60,11 @@ const UserProfileEdit = ({ user, onSave }: UserProfileEditProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex justify-center mb-6">
+        <ProfilePictureUpload user={currentUser} onUpdate={handleProfilePictureUpdate} />
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input

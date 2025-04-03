@@ -1,3 +1,4 @@
+
 export type Ride = {
   id: string;
   driver: User;
@@ -46,6 +47,9 @@ export type User = {
   address?: string;
   city?: string;
   zipCode?: string;
+  joinedDate?: string;
+  tripsTaken?: number;
+  ridesOffered?: number;
 };
 
 export type NotificationPreferences = {

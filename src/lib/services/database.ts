@@ -1,6 +1,8 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { Ride, RideRequest, User, BookingFormData, RideStatus, RequestStatus } from "@/lib/types";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from 'uuid';
 
 export const databaseService = {
   // User related functions
@@ -34,7 +36,8 @@ export const databaseService = {
           bio: profileData.bio,
           address: profileData.address,
           city: profileData.city,
-          zip_code: profileData.zipCode
+          zip_code: profileData.zipCode,
+          avatar: profileData.avatar
         })
         .eq('id', userId);
         
@@ -47,6 +50,57 @@ export const databaseService = {
       console.error("Error updating user profile:", error.message);
       toast.error("Failed to update profile");
       return false;
+    }
+  },
+
+  async uploadProfilePicture(userId: string, file: File): Promise<User | null> {
+    try {
+      // Check if avatars bucket exists
+      const { data: bucketExists } = await supabase.storage.getBucket('avatars');
+      
+      if (!bucketExists) {
+        // Create avatars bucket if it doesn't exist
+        const { error } = await supabase.storage.createBucket('avatars', {
+          public: true,
+          fileSizeLimit: 5242880, // 5MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+        });
+        if (error) throw error;
+      }
+
+      // Generate a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${uuidv4()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+      
+      // Upload the file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL of the uploaded file
+      const { data: publicURL } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      if (!publicURL) throw new Error("Failed to get public URL");
+      
+      // Update the user's avatar URL in the database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar: publicURL.publicUrl })
+        .eq('id', userId);
+        
+      if (updateError) throw updateError;
+      
+      // Fetch and return the updated user profile
+      return await this.fetchUserProfile(userId);
+    } catch (error: any) {
+      console.error("Error uploading profile picture:", error.message);
+      toast.error("Failed to upload profile picture");
+      return null;
     }
   },
   
@@ -340,13 +394,13 @@ export const databaseService = {
     }
   },
   
-  async bookRide(rideId: string, userId: string, bookingData: BookingFormData): Promise<boolean> {
+  async bookRide(rideId: string, userId: string, bookingData: BookingFormData): Promise<{ success: boolean, bookingId?: string }> {
     try {
       const hasExistingBooking = await this.checkExistingBooking(rideId, userId);
       
       if (hasExistingBooking) {
         toast.error("You have already booked this ride");
-        return false;
+        return { success: false };
       }
       
       const { data, error } = await supabase
@@ -358,7 +412,9 @@ export const databaseService = {
           contact_phone: bookingData.contactPhone,
           notes: bookingData.notes,
           payment_method: bookingData.paymentMethod || 'cash',
-        });
+        })
+        .select('id')
+        .single();
         
       if (error) {
         throw error;
@@ -381,28 +437,20 @@ export const databaseService = {
       
       // Auto-generate receipt after successful booking
       try {
-        const { data: bookingRecord } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('ride_id', rideId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (bookingRecord) {
-          await this.generateReceipt(bookingRecord.id);
+        if (data && data.id) {
+          await this.generateReceipt(data.id);
+          return { success: true, bookingId: data.id };
         }
       } catch (receiptError) {
         console.error("Failed to auto-generate receipt:", receiptError);
         // Continue even if receipt generation fails
       }
       
-      return true;
+      return { success: true, bookingId: data?.id };
     } catch (error: any) {
       console.error("Error booking ride:", error.message);
       toast.error("Failed to book ride");
-      return false;
+      return { success: false };
     }
   },
   
@@ -415,7 +463,8 @@ export const databaseService = {
           ride:ride_id(
             *,
             driver:driver_id(*)
-          )
+          ),
+          user:user_id(*)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });

@@ -30,7 +30,8 @@ export const mapDbProfileToUser = (profile: any) => {
     address: profile.address,
     city: profile.city,
     zipCode: profile.zip_code,
-    createdAt: profile.created_at
+    createdAt: profile.created_at,
+    joinedDate: profile.created_at
   };
 };
 
