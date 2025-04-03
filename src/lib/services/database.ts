@@ -112,7 +112,11 @@ export const databaseService = {
         return [];
       }
       
-      return data || [];
+      // Map the ride data using mapDbRideToRide
+      return data.map(booking => ({
+        ...booking,
+        ride: mapDbRideToRide(booking.ride)
+      })) || [];
     } catch (error) {
       console.error("Error in fetchUserBookings:", error);
       return [];
@@ -184,8 +188,38 @@ export const databaseService = {
     }
   },
   
+  // Check if user is the driver of the ride
+  async isUserDriverOfRide(rideId: string, userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from("rides")
+        .select("id")
+        .eq("id", rideId)
+        .eq("driver_id", userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error checking if user is driver:", error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (error) {
+      console.error("Error in isUserDriverOfRide:", error);
+      return false;
+    }
+  },
+  
   async bookRide(rideId: string, userId: string, formData: BookingFormData): Promise<boolean> {
     try {
+      // Check if user is the driver of this ride
+      const isDriver = await this.isUserDriverOfRide(rideId, userId);
+      if (isDriver) {
+        console.error("Driver cannot book their own ride");
+        toast.error("You cannot book your own ride");
+        return false;
+      }
+      
       // First, check if there are enough seats available
       const { data: ride, error: rideError } = await supabase
         .from("rides")

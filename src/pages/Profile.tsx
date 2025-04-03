@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -61,15 +60,8 @@ const Profile = () => {
         // Fetch user's bookings
         const userBookings = await databaseService.fetchUserBookings(user.id);
         
-        // Map bookings to include the ride object
-        const mappedBookings = userBookings.map(booking => {
-          const mappedRide = databaseService.mapDbRideToRide(booking.ride);
-          return {
-            ...booking,
-            ride: mappedRide
-          };
-        });
-        
+        // Process bookings to include proper ride objects
+        const mappedBookings = userBookings || [];
         setBookings(mappedBookings);
         
         // Fetch user's receipts

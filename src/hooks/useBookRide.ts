@@ -21,6 +21,13 @@ export const useBookRide = (rideId: string) => {
     try {
       setIsBooking(true);
       
+      // Check if user is the driver
+      const isDriver = await databaseService.isUserDriverOfRide(rideId, user.id);
+      if (isDriver) {
+        toast.error("You cannot book your own ride");
+        return { success: false };
+      }
+      
       // Check for existing booking
       const hasExistingBooking = await databaseService.checkExistingBooking(rideId, user.id);
       if (hasExistingBooking) {
