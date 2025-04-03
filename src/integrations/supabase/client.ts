@@ -17,7 +17,8 @@ export const supabase = createClient<Database>(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      storageKey: 'ride-and-share-auth'
+      storageKey: 'ride-and-share-auth',
+      storage: localStorage
     }
   }
 );
