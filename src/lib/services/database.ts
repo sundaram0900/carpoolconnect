@@ -84,7 +84,7 @@ export const databaseService = {
         time: request.time,
         numberOfSeats: request.number_of_seats,
         maxPrice: request.max_price,
-        status: request.status,
+        status: request.status as any,
         description: request.description,
         createdAt: request.created_at,
       })) || [];
@@ -126,7 +126,7 @@ export const databaseService = {
   async fetchUserReceipts(userId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_user_receipts', { user_id_param: userId });
+        .rpc('get_user_receipts', { user_id_param: userId as any });
         
       if (error) {
         console.error("Error fetching user receipts:", error);
@@ -143,7 +143,7 @@ export const databaseService = {
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
-        body: { receiptId }
+        body: { receiptId } as any
       });
       
       if (error || !data) {
@@ -238,6 +238,7 @@ export const databaseService = {
         return false;
       }
       
+      // Start a transaction by using a stored procedure or multiple operations in sequence
       // Create a booking
       const { error: bookingError } = await supabase
         .from("bookings")
@@ -308,6 +309,89 @@ export const databaseService = {
     } catch (error) {
       console.error("Error in fetchRideBookings:", error);
       return [];
+    }
+  },
+  
+  async cancelBooking(bookingId: string, userId: string): Promise<boolean> {
+    try {
+      // First, get the booking details to check if user is authorized and get seat count
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          ride:ride_id(
+            *
+          )
+        `)
+        .eq("id", bookingId)
+        .single();
+      
+      if (bookingError || !booking) {
+        console.error("Error fetching booking:", bookingError);
+        toast.error("Failed to cancel booking: Booking not found");
+        return false;
+      }
+      
+      // Check if user is authorized to cancel (is the booking user or the ride driver)
+      const isBookingUser = booking.user_id === userId;
+      const isRideDriver = booking.ride.driver_id === userId;
+      
+      if (!isBookingUser && !isRideDriver) {
+        toast.error("You are not authorized to cancel this booking");
+        return false;
+      }
+      
+      // Delete the booking
+      const { error: deleteError } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingId);
+      
+      if (deleteError) {
+        console.error("Error deleting booking:", deleteError);
+        toast.error("Failed to cancel booking");
+        return false;
+      }
+      
+      // Return the seats to the available pool
+      const newAvailableSeats = booking.ride.available_seats + booking.seats;
+      const { error: updateError } = await supabase
+        .from("rides")
+        .update({ available_seats: newAvailableSeats })
+        .eq("id", booking.ride_id);
+      
+      if (updateError) {
+        console.error("Error updating ride seats:", updateError);
+        // Don't return false here as the booking was already deleted
+      }
+      
+      // Remove user from booked_by array if they no longer have any active bookings for this ride
+      const { data: remainingBookings } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("ride_id", booking.ride_id)
+        .eq("user_id", booking.user_id);
+      
+      if (!remainingBookings || remainingBookings.length === 0) {
+        // User has no more bookings for this ride, remove from booked_by
+        const { error: bookedByError } = await supabase
+          .from("rides")
+          .update({
+            booked_by: supabase.sql`array_remove(booked_by, ${booking.user_id})`
+          })
+          .eq("id", booking.ride_id);
+        
+        if (bookedByError) {
+          console.error("Error updating booked_by array:", bookedByError);
+        }
+      }
+      
+      toast.success("Booking cancelled successfully");
+      return true;
+    } catch (error) {
+      console.error("Error in cancelBooking:", error);
+      toast.error("An unexpected error occurred");
+      return false;
     }
   },
   

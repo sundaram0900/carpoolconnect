@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ride, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { VerifyOTP } from "./ui/verify-otp";
 import RideChat from "./RideChat";
 import { rideService } from "@/lib/services/rideService";
+import { databaseService } from "@/lib/services/database";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -22,7 +24,8 @@ import {
   LayoutDashboard as Route,
   DollarSign as IndianRupee,
   Users,
-  Car
+  Car,
+  RefreshCcw
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,14 +37,17 @@ interface RideDetailsModalTabsProps {
   ride: Ride;
   defaultTab?: string;
   onBookClick: () => void;
+  onRideUpdate?: (updatedRide: Ride) => void;
 }
 
 const RideDetailsModalTabs = ({ 
   ride, 
   defaultTab = "details",
-  onBookClick 
+  onBookClick,
+  onRideUpdate
 }: RideDetailsModalTabsProps) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
   
   const isDriver = user?.id === ride.driver.id;
@@ -66,10 +72,27 @@ const RideDetailsModalTabs = ({
     chatWithUser = ride.driver;
   }
 
+  const refreshRideData = async () => {
+    if (!ride.id) return;
+    
+    setRefreshing(true);
+    try {
+      const updatedRide = await databaseService.fetchRideById(ride.id);
+      if (updatedRide && onRideUpdate) {
+        onRideUpdate(updatedRide);
+      }
+    } catch (error) {
+      console.error("Failed to refresh ride data:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleStartRide = async () => {
     const success = await rideService.startRide(ride.id);
     if (success) {
       toast.success("Ride started successfully");
+      refreshRideData();
     }
   };
 
@@ -77,6 +100,7 @@ const RideDetailsModalTabs = ({
     const success = await rideService.completeRide(ride.id);
     if (success) {
       toast.success("Ride completed successfully");
+      refreshRideData();
     }
   };
 
@@ -84,6 +108,7 @@ const RideDetailsModalTabs = ({
     const success = await rideService.cancelRide(ride.id);
     if (success) {
       toast.success("Ride cancelled successfully");
+      refreshRideData();
     }
   };
 
@@ -107,36 +132,52 @@ const RideDetailsModalTabs = ({
     }
   };
 
+  const handleBookingChange = () => {
+    refreshRideData();
+  };
+
   return (
     <Tabs defaultValue={defaultTab} value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="grid grid-cols-5 mb-4">
-        <TabsTrigger value="details">
-          <Info className="h-4 w-4 mr-2" />
-          Details
-        </TabsTrigger>
-        <TabsTrigger value="driver">
-          <Info className="h-4 w-4 mr-2" />
-          Driver
-        </TabsTrigger>
-        {isDriver && (
-          <TabsTrigger value="bookings">
-            <Users className="h-4 w-4 mr-2" />
-            Bookings
+      <div className="flex justify-between items-center mb-4">
+        <TabsList className="grid grid-cols-5">
+          <TabsTrigger value="details">
+            <Info className="h-4 w-4 mr-2" />
+            Details
           </TabsTrigger>
-        )}
-        {(isDriver || isPassenger) && (
-          <TabsTrigger value="verify">
-            <ShieldCheck className="h-4 w-4 mr-2" />
-            Verify
+          <TabsTrigger value="driver">
+            <Info className="h-4 w-4 mr-2" />
+            Driver
           </TabsTrigger>
-        )}
-        {(isDriver || isPassenger) && (
-          <TabsTrigger value="chat">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Chat
-          </TabsTrigger>
-        )}
-      </TabsList>
+          {isDriver && (
+            <TabsTrigger value="bookings">
+              <Users className="h-4 w-4 mr-2" />
+              Bookings
+            </TabsTrigger>
+          )}
+          {(isDriver || isPassenger) && (
+            <TabsTrigger value="verify">
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Verify
+            </TabsTrigger>
+          )}
+          {(isDriver || isPassenger) && (
+            <TabsTrigger value="chat">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Chat
+            </TabsTrigger>
+          )}
+        </TabsList>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={refreshRideData}
+          disabled={refreshing}
+          className="flex items-center gap-1"
+        >
+          <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
       
       <TabsContent value="details">
         <div className="space-y-4">
@@ -292,7 +333,7 @@ const RideDetailsModalTabs = ({
       
       {isDriver && (
         <TabsContent value="bookings">
-          <RideBookingsList rideId={ride.id} />
+          <RideBookingsList rideId={ride.id} onBookingChange={handleBookingChange} />
         </TabsContent>
       )}
       

@@ -21,36 +21,40 @@ const RideDetails = () => {
   const bookingSuccess = searchParams.get('booking_success') === 'true';
   const bookingId = searchParams.get('booking_id') || '';
   
-  useEffect(() => {
-    const loadRideDetails = async () => {
-      if (!rideId) return;
+  const loadRideDetails = async () => {
+    if (!rideId) return;
+    
+    try {
+      setIsLoading(true);
+      setLoadError(null);
       
-      try {
-        setIsLoading(true);
-        setLoadError(null);
-        
-        console.log("Fetching ride details for ID:", rideId);
-        const rideDetails = await databaseService.fetchRideById(rideId);
-        console.log("Received ride details:", rideDetails);
-        
-        if (rideDetails) {
-          setRide(rideDetails);
-        } else {
-          // If ride not found, navigate to not found page
-          toast.error("Ride not found");
-          navigate("/not-found", { replace: true });
-        }
-      } catch (error) {
-        console.error("Error fetching ride details:", error);
-        setLoadError("Failed to load ride details. Please try again later.");
-        toast.error("Error loading ride details");
-      } finally {
-        setIsLoading(false);
+      console.log("Fetching ride details for ID:", rideId);
+      const rideDetails = await databaseService.fetchRideById(rideId);
+      console.log("Received ride details:", rideDetails);
+      
+      if (rideDetails) {
+        setRide(rideDetails);
+      } else {
+        // If ride not found, navigate to not found page
+        toast.error("Ride not found");
+        navigate("/not-found", { replace: true });
       }
-    };
+    } catch (error) {
+      console.error("Error fetching ride details:", error);
+      setLoadError("Failed to load ride details. Please try again later.");
+      toast.error("Error loading ride details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadRideDetails();
   }, [rideId, navigate]);
+
+  const handleRideUpdate = (updatedRide: Ride) => {
+    setRide(updatedRide);
+  };
 
   if (isLoading) {
     return (
@@ -105,7 +109,11 @@ const RideDetails = () => {
           ) : null}
           
           {/* We're reusing the RideDetailsModal component but forcing it to be open */}
-          <RideDetailsModal ride={ride} isOpenByDefault={true} />
+          <RideDetailsModal 
+            ride={ride} 
+            isOpenByDefault={true} 
+            onRideUpdate={handleRideUpdate} 
+          />
         </motion.div>
       </div>
     </div>

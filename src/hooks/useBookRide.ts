@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useBookRide = (rideId: string) => {
   const [isBooking, setIsBooking] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingId, setBookingId] = useState<string | undefined>(undefined);
   const { user } = useAuth();
@@ -66,9 +67,29 @@ export const useBookRide = (rideId: string) => {
     }
   };
 
+  const cancelBooking = async (bookingId: string): Promise<boolean> => {
+    if (!user) {
+      toast.error("You must be logged in to cancel a booking");
+      return false;
+    }
+
+    try {
+      setIsCancelling(true);
+      const success = await databaseService.cancelBooking(bookingId, user.id);
+      return success;
+    } catch (error) {
+      console.error("Error in cancelBooking:", error);
+      return false;
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   return {
     bookRide,
+    cancelBooking,
     isBooking,
+    isCancelling,
     bookingSuccess,
     bookingId,
     resetBookingState: () => {
