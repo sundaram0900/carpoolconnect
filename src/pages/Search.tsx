@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import RideCard from "@/components/Search/RideCard";
+import RideCardWrapper from "@/components/RideCardWrapper";
 
 const Search = () => {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -247,14 +248,7 @@ const Search = () => {
               >
                 {filteredRides.map((ride) => (
                   <div key={ride.id} className="relative">
-                    <RideDetailsModal 
-                      ride={ride}
-                      trigger={
-                        <div className="cursor-pointer hover:shadow-md transition-shadow duration-200">
-                          <RideCard ride={ride} />
-                        </div>
-                      }
-                    />
+                    <RideCardWrapper ride={ride} />
                   </div>
                 ))}
               </motion.div>

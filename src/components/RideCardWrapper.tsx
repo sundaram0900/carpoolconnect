@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import RideCard from "@/components/RideCard";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import { Ride } from "@/lib/types";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface RideCardWrapperProps {
   ride: Ride;
@@ -11,6 +12,12 @@ interface RideCardWrapperProps {
 
 const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user } = useAuth();
+  
+  // Check if user is the driver or if they've already booked this ride
+  const isDriver = user?.id === ride.driver.id;
+  const isPassenger = ride.bookedBy?.includes(user?.id || "");
+  const canBookRide = !isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0;
   
   return (
     <div>
@@ -21,13 +28,13 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
           size="sm" 
           onClick={() => setIsModalOpen(true)}
         >
-          View & Book
+          {canBookRide ? "View & Book" : "View Details"}
         </Button>
       </div>
       <RideDetailsModal 
         ride={ride} 
-        trigger={null} 
-        isOpenByDefault={isModalOpen}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );

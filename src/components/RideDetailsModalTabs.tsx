@@ -62,15 +62,41 @@ const RideDetailsModalTabs = ({
   const duration = 45; // example value in minutes
 
   // Determine who the chat will be with
-  let chatWithUser: User;
-  if (isDriver) {
+  let chatWithUser: User | null = null;
+  if (isDriver && ride.bookedBy && ride.bookedBy.length > 0) {
     // If current user is driver, they chat with the first passenger
     // In a real app, you'd have a UI to select which passenger to chat with
-    chatWithUser = { id: ride.bookedBy?.[0] || "", name: "Passenger" } as User;
-  } else {
+    chatWithUser = { id: ride.bookedBy[0] || "", name: "Passenger" } as User;
+  } else if (isPassenger) {
     // If current user is passenger, they chat with the driver
     chatWithUser = ride.driver;
   }
+
+  // Set up real-time subscription for ride changes
+  useEffect(() => {
+    if (!ride.id) return;
+
+    const channel = supabase
+      .channel('public:rides')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rides',
+          filter: `id=eq.${ride.id}`
+        },
+        (payload) => {
+          console.log('Ride updated:', payload);
+          refreshRideData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [ride.id]);
 
   const refreshRideData = async () => {
     if (!ride.id) return;
@@ -80,9 +106,11 @@ const RideDetailsModalTabs = ({
       const updatedRide = await databaseService.fetchRideById(ride.id);
       if (updatedRide && onRideUpdate) {
         onRideUpdate(updatedRide);
+        toast.success("Ride information updated");
       }
     } catch (error) {
       console.error("Failed to refresh ride data:", error);
+      toast.error("Failed to refresh ride data");
     } finally {
       setRefreshing(false);
     }
@@ -136,36 +164,52 @@ const RideDetailsModalTabs = ({
     refreshRideData();
   };
 
+  // Define tabs based on user role and ride status
+  const getTabsList = () => {
+    const tabs = [
+      { value: "details", label: "Details", icon: <Info className="h-4 w-4 mr-2" /> },
+      { value: "driver", label: "Driver", icon: <Info className="h-4 w-4 mr-2" /> },
+    ];
+    
+    if (isDriver) {
+      tabs.push({ 
+        value: "bookings", 
+        label: "Bookings", 
+        icon: <Users className="h-4 w-4 mr-2" /> 
+      });
+    }
+    
+    if ((isDriver || isPassenger) && ride.status !== 'scheduled') {
+      tabs.push({ 
+        value: "verify", 
+        label: "Verify", 
+        icon: <ShieldCheck className="h-4 w-4 mr-2" /> 
+      });
+    }
+    
+    if ((isDriver || isPassenger) && ride.bookedBy?.length > 0) {
+      tabs.push({ 
+        value: "chat", 
+        label: "Chat", 
+        icon: <MessageSquare className="h-4 w-4 mr-2" /> 
+      });
+    }
+    
+    return tabs;
+  };
+
+  const tabsList = getTabsList();
+
   return (
     <Tabs defaultValue={defaultTab} value={activeTab} onValueChange={setActiveTab}>
       <div className="flex justify-between items-center mb-4">
-        <TabsList className="grid grid-cols-5">
-          <TabsTrigger value="details">
-            <Info className="h-4 w-4 mr-2" />
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="driver">
-            <Info className="h-4 w-4 mr-2" />
-            Driver
-          </TabsTrigger>
-          {isDriver && (
-            <TabsTrigger value="bookings">
-              <Users className="h-4 w-4 mr-2" />
-              Bookings
+        <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${tabsList.length}, 1fr)` }}>
+          {tabsList.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.icon}
+              {tab.label}
             </TabsTrigger>
-          )}
-          {(isDriver || isPassenger) && (
-            <TabsTrigger value="verify">
-              <ShieldCheck className="h-4 w-4 mr-2" />
-              Verify
-            </TabsTrigger>
-          )}
-          {(isDriver || isPassenger) && (
-            <TabsTrigger value="chat">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Chat
-            </TabsTrigger>
-          )}
+          ))}
         </TabsList>
         <Button 
           variant="ghost" 
@@ -256,6 +300,18 @@ const RideDetailsModalTabs = ({
               <div className="font-medium">{ride.carInfo?.make} {ride.carInfo?.model}</div>
             </div>
           </div>
+
+          {ride.bookedBy && ride.bookedBy.length > 0 && !isDriver && (
+            <div className="bg-primary/10 p-4 rounded-lg">
+              <h4 className="font-medium mb-2 flex items-center">
+                <Users className="h-4 w-4 mr-2" />
+                Other Passengers
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                This ride has {ride.bookedBy.length} {ride.bookedBy.length === 1 ? 'passenger' : 'passengers'} (including you if you've booked).
+              </p>
+            </div>
+          )}
           
           <div className="flex justify-between items-center pt-4">
             <div className="flex items-center space-x-3">
@@ -337,7 +393,7 @@ const RideDetailsModalTabs = ({
         </TabsContent>
       )}
       
-      {(isDriver || isPassenger) && (
+      {(isDriver || isPassenger) && ride.status !== 'scheduled' && (
         <TabsContent value="verify">
           <VerifyOTP 
             userId={user?.id || ""} 
@@ -352,7 +408,7 @@ const RideDetailsModalTabs = ({
         </TabsContent>
       )}
       
-      {(isDriver || isPassenger) && ride.bookedBy?.length > 0 && (
+      {(isDriver || isPassenger) && ride.bookedBy?.length > 0 && chatWithUser && (
         <TabsContent value="chat">
           <RideChat ride={ride} otherUser={chatWithUser} />
         </TabsContent>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +24,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !otherUser?.id) return;
 
     const fetchMessages = async () => {
       try {
@@ -103,7 +104,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, ride.id, otherUser.id]);
+  }, [user, ride.id, otherUser?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -119,7 +120,7 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !newMessage.trim()) return;
+    if (!user || !newMessage.trim() || !otherUser?.id) return;
     
     try {
       setIsSending(true);
@@ -153,6 +154,17 @@ const RideChat = ({ ride, otherUser }: RideChatProps) => {
 
   return (
     <div className="flex flex-col h-96">
+      <div className="p-4 bg-secondary/30 mb-2 rounded-lg flex items-center space-x-2">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={getAvatarUrl(otherUser)} alt={otherUser.name} />
+          <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div>
+          <div className="font-medium text-sm">{otherUser.name}</div>
+          <div className="text-xs text-muted-foreground">Chat about your ride</div>
+        </div>
+      </div>
+      
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
