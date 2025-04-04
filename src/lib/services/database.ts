@@ -1,5 +1,6 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
-import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
+import { BookingFormData, Ride, RideRequest, User, RideStatus } from "@/lib/types";
 import { toast } from "sonner";
 
 export const databaseService = {
@@ -180,7 +181,7 @@ export const databaseService = {
         return false;
       }
 
-      return ride.booked_by?.includes(userId) || false;
+      return Array.isArray(ride.booked_by) && ride.booked_by.includes(userId) || false;
     } catch (error) {
       console.error("Error in checkExistingBooking:", error);
       return false;

@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import RideCard from "@/components/Search/RideCard";
+import RideCardWrapper from "@/components/RideCardWrapper";
 
 const Search = () => {
   const [rides, setRides] = useState<Ride[]>([]);
