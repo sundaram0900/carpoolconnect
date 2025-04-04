@@ -36,6 +36,13 @@ export const useBookRide = (rideId: string) => {
         return { success: false };
       }
 
+      // Check available seats
+      const ride = await databaseService.fetchRideById(rideId);
+      if (!ride || ride.availableSeats < formData.seats) {
+        toast.error(`Only ${ride?.availableSeats || 0} seats available`);
+        return { success: false };
+      }
+
       // Book the ride
       const success = await databaseService.bookRide(rideId, user.id, formData);
       

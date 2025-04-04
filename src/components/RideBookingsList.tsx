@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface RideBookingsListProps {
   rideId: string;
@@ -39,6 +40,7 @@ const RideBookingsList = ({ rideId, onBookingChange }: RideBookingsListProps) =>
       setBookings(bookingsData);
     } catch (error) {
       console.error("Failed to load bookings:", error);
+      toast.error("Failed to load passenger details");
     } finally {
       setIsLoading(false);
     }
@@ -88,11 +90,19 @@ const RideBookingsList = ({ rideId, onBookingChange }: RideBookingsListProps) =>
     );
   }
 
+  const totalSeatsBooked = bookings.reduce((acc, booking) => acc + booking.seats, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="font-medium text-lg">Passengers ({bookings.length})</h3>
-        <Badge variant="outline">{bookings.reduce((acc, booking) => acc + booking.seats, 0)} seats booked</Badge>
+        <Badge variant="outline">{totalSeatsBooked} {totalSeatsBooked === 1 ? 'seat' : 'seats'} booked</Badge>
+      </div>
+
+      <div className="bg-secondary/30 p-3 rounded-lg mb-4">
+        <p className="text-sm text-muted-foreground">
+          These are the passengers who have booked seats on your ride. You can message them or cancel their booking if needed.
+        </p>
       </div>
       
       {bookings.map((booking) => (
@@ -168,6 +178,15 @@ const RideBookingsList = ({ rideId, onBookingChange }: RideBookingsListProps) =>
           </div>
         </div>
       ))}
+
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="w-full"
+        onClick={loadBookings}
+      >
+        Refresh Passenger List
+      </Button>
 
       <AlertDialog open={!!bookingToCancel} onOpenChange={(open) => !open && setBookingToCancel(null)}>
         <AlertDialogContent>
