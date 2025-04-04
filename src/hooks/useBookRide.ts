@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { databaseService } from "@/lib/services/database";
 import { useAuth } from "@/lib/context/AuthContext";
-import { BookingFormData } from "@/lib/types";
+import { BookingFormData, Ride } from "@/lib/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,7 +13,7 @@ export const useBookRide = (rideId: string) => {
   const [bookingId, setBookingId] = useState<string | undefined>(undefined);
   const { user } = useAuth();
 
-  const bookRide = async (formData: BookingFormData): Promise<{ success: boolean; bookingId?: string }> => {
+  const bookRide = async (formData: BookingFormData): Promise<{ success: boolean; bookingId?: string; updatedRide?: Ride }> => {
     if (!user) {
       toast.error("You must be logged in to book a ride");
       return { success: false };
@@ -61,8 +61,15 @@ export const useBookRide = (rideId: string) => {
           setBookingId(newBooking.id);
         }
         
+        // Fetch the updated ride details
+        const updatedRide = await databaseService.fetchRideById(rideId);
+        
         setBookingSuccess(true);
-        return { success: true, bookingId: newBooking?.id };
+        return { 
+          success: true, 
+          bookingId: newBooking?.id,
+          updatedRide 
+        };
       }
       
       return { success: false };

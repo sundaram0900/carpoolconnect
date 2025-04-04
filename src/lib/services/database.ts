@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -469,12 +470,14 @@ export const databaseService = {
         
       if (error) {
         console.error("Error creating ride:", error);
+        toast.error("Failed to create ride: " + error.message);
         return false;
       }
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in createRide:", error);
+      toast.error("Failed to create ride: " + (error.message || "Unknown error"));
       return false;
     }
   },

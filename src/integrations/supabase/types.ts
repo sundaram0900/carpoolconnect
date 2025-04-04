@@ -281,6 +281,7 @@ export type Database = {
       rides: {
         Row: {
           available_seats: number
+          booked_by: string[] | null
           car_color: string | null
           car_license_plate: string | null
           car_make: string | null
@@ -309,6 +310,7 @@ export type Database = {
         }
         Insert: {
           available_seats: number
+          booked_by?: string[] | null
           car_color?: string | null
           car_license_plate?: string | null
           car_make?: string | null
@@ -337,6 +339,7 @@ export type Database = {
         }
         Update: {
           available_seats?: number
+          booked_by?: string[] | null
           car_color?: string | null
           car_license_plate?: string | null
           car_make?: string | null

@@ -63,6 +63,9 @@ const RideDetailsModal = ({
         // Pass booking information to the ride details page
         navigate(`/ride/${ride.id}?booking_success=true&booking_id=${result.bookingId || ''}`);
         handleClose();
+      } else if (onRideUpdate && result.updatedRide) {
+        // If we're already on the ride details page, update the ride data
+        onRideUpdate(result.updatedRide);
       }
     }
     
