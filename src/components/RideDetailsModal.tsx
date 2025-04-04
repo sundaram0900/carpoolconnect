@@ -4,6 +4,7 @@ import { Ride } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import RideDetailsModalTabs from "./RideDetailsModalTabs";
@@ -16,6 +17,7 @@ interface RideDetailsModalProps {
   isOpenByDefault?: boolean;
   onClose?: () => void;
   onRideUpdate?: (updatedRide: Ride) => void;
+  trigger?: React.ReactNode;
 }
 
 const RideDetailsModal = ({ 
@@ -23,7 +25,8 @@ const RideDetailsModal = ({
   isOpen: externalIsOpen, 
   isOpenByDefault = false,
   onClose: externalOnClose,
-  onRideUpdate
+  onRideUpdate,
+  trigger
 }: RideDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : isOpenByDefault);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
@@ -81,6 +84,7 @@ const RideDetailsModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
         <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
           <div className="p-6">
             <RideDetailsModalTabs 

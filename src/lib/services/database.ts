@@ -5,59 +5,26 @@ import { toast } from "sonner";
 export const databaseService = {
   async fetchRideById(rideId: string): Promise<Ride | null> {
     try {
-      const { data: ride, error } = await supabase
+      const { data, error } = await supabase
         .from('rides')
-        .select(`
-          *,
-          driver:driver_id(*)
-        `)
+        .select('*, driver:driver_id(*)') 
         .eq('id', rideId)
         .single();
 
-      if (error || !ride) {
-        console.error("Error fetching ride by ID:", error);
-        return null;
+      if (error) throw error;
+      
+      // Ensure status is a valid RideStatus type
+      let status: RideStatus = 'scheduled';
+      if (data.status === 'scheduled' || 
+          data.status === 'in-progress' || 
+          data.status === 'completed' || 
+          data.status === 'cancelled') {
+        status = data.status as RideStatus;
       }
-
-      const formattedRide: Ride = {
-        id: ride.id,
-        driver: mapDbProfileToUser(ride.driver),
-        startLocation: {
-          address: ride.start_address,
-          city: ride.start_city,
-          state: ride.start_state || '',
-          country: ride.start_country || 'India',
-          lat: ride.start_lat,
-          lng: ride.start_lng,
-        },
-        endLocation: {
-          address: ride.end_address,
-          city: ride.end_city,
-          state: ride.end_state || '',
-          country: ride.end_country || 'India',
-          lat: ride.end_lat,
-          lng: ride.end_lng,
-        },
-        date: ride.date,
-        time: ride.time,
-        price: ride.price,
-        availableSeats: ride.available_seats,
-        description: ride.description || '',
-        status: ride.status || 'scheduled',
-        carInfo: {
-          make: ride.car_make || '',
-          model: ride.car_model || '',
-          year: ride.car_year || 0,
-          color: ride.car_color || '',
-          licensePlate: ride.car_license_plate || '',
-        },
-        bookedBy: ride.booked_by || [],
-        createdAt: ride.created_at,
-      };
-
-      return formattedRide;
+      
+      return mapDbRideToRide(data);
     } catch (error) {
-      console.error("Error in fetchRideById:", error);
+      console.error("Error fetching ride by ID:", error);
       return null;
     }
   },
@@ -557,6 +524,21 @@ export const databaseService = {
     } catch (error) {
       console.error("Error in updateUserProfile:", error);
       return null;
+    }
+  },
+  
+  async cancelRide(rideId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('rides')
+        .update({ status: 'cancelled' as RideStatus })
+        .eq('id', rideId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error cancelling ride:", error);
+      return false;
     }
   }
 };

@@ -247,14 +247,7 @@ const Search = () => {
               >
                 {filteredRides.map((ride) => (
                   <div key={ride.id} className="relative">
-                    <RideDetailsModal 
-                      ride={ride}
-                      trigger={
-                        <div className="cursor-pointer hover:shadow-md transition-shadow duration-200">
-                          <RideCard ride={ride} />
-                        </div>
-                      }
-                    />
+                    <RideCardWrapper ride={ride} />
                   </div>
                 ))}
               </motion.div>
