@@ -15,8 +15,16 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
   const { user } = useAuth();
   
   // Check if user is the driver or if they've already booked this ride
-  const isDriver = user?.id === ride.driver.id;
-  const isPassenger = ride.bookedBy?.includes(user?.id || "");
+  const isDriver = user?.id === ride.driver?.id;
+  
+  // Safe check if bookedBy exists and is an array
+  const isPassenger = Array.isArray(ride.bookedBy) && user?.id ? ride.bookedBy.includes(user.id) : false;
+  
+  // Only allow booking if:
+  // - User is not the driver
+  // - User hasn't already booked
+  // - Ride is scheduled
+  // - Seats are available
   const canBookRide = !isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0;
   
   return (

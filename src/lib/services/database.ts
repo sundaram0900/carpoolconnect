@@ -181,6 +181,7 @@ export const databaseService = {
         return false;
       }
 
+      // Make sure booked_by is treated as an array and check if it contains userId
       return Array.isArray(ride.booked_by) && ride.booked_by.includes(userId) || false;
     } catch (error) {
       console.error("Error in checkExistingBooking:", error);
@@ -215,6 +216,8 @@ export const databaseService = {
     formData: BookingFormData
   ): Promise<boolean> {
     try {
+      console.log("Starting bookRide process", { rideId, userId, formData });
+      
       const isDriver = await this.isUserDriverOfRide(rideId, userId);
       if (isDriver) {
         console.error("Driver cannot book their own ride");
@@ -239,6 +242,7 @@ export const databaseService = {
         return false;
       }
 
+      console.log("Creating booking record");
       const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
@@ -257,12 +261,15 @@ export const databaseService = {
       }
 
       const newAvailableSeats = ride.available_seats - formData.seats;
-      let updatedBookedBy = [...(ride.booked_by || [])];
+      
+      // Ensure booked_by is an array
+      let updatedBookedBy: string[] = Array.isArray(ride.booked_by) ? [...ride.booked_by] : [];
       
       if (!updatedBookedBy.includes(userId)) {
         updatedBookedBy.push(userId);
       }
 
+      console.log("Updating ride availability", { newAvailableSeats, updatedBookedBy });
       const { error: updateError } = await supabase
         .from("rides")
         .update({ 

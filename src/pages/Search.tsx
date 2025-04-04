@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import SearchForm from "@/components/SearchForm";
 import { fetchRides } from "@/lib/utils";
 import { Ride } from "@/lib/types";
@@ -35,6 +37,7 @@ const Search = () => {
       try {
         setIsLoading(true);
         const fetchedRides = await fetchRides();
+        console.log("Fetched rides:", fetchedRides);
         setRides(fetchedRides);
       } catch (error) {
         console.error("Error fetching rides:", error);

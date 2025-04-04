@@ -1,15 +1,15 @@
-
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Ride } from "@/lib/types";
 import { databaseService } from "@/lib/services/database";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import BookingSuccessCard from "@/components/BookingSuccessCard";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 const RideDetails = () => {
   const { rideId } = useParams<{ rideId: string }>();
@@ -50,7 +50,7 @@ const RideDetails = () => {
 
   useEffect(() => {
     loadRideDetails();
-  }, [rideId, navigate]);
+  }, [rideId]);
 
   const handleRideUpdate = (updatedRide: Ride) => {
     setRide(updatedRide);
@@ -102,6 +102,15 @@ const RideDetails = () => {
           transition={{ duration: 0.5 }}
           className="max-w-3xl mx-auto"
         >
+          <div className="mb-6">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/search" className="flex items-center">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to search
+              </Link>
+            </Button>
+          </div>
+          
           {bookingSuccess ? (
             <div className="mb-8">
               <BookingSuccessCard bookingId={bookingId} rideId={rideId || ''} source="page" />

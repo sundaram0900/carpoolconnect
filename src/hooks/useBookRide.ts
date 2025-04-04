@@ -14,7 +14,10 @@ export const useBookRide = (rideId: string) => {
   const { user } = useAuth();
 
   const bookRide = async (formData: BookingFormData): Promise<{ success: boolean; bookingId?: string; updatedRide?: Ride }> => {
+    console.log("useBookRide.bookRide called", { rideId, formData });
+    
     if (!user) {
+      console.error("No user logged in");
       toast.error("You must be logged in to book a ride");
       return { success: false };
     }
@@ -25,6 +28,7 @@ export const useBookRide = (rideId: string) => {
       // Check if user is the driver
       const isDriver = await databaseService.isUserDriverOfRide(rideId, user.id);
       if (isDriver) {
+        console.error("User is driver of this ride");
         toast.error("You cannot book your own ride");
         return { success: false };
       }
@@ -32,6 +36,7 @@ export const useBookRide = (rideId: string) => {
       // Check for existing booking
       const hasExistingBooking = await databaseService.checkExistingBooking(rideId, user.id);
       if (hasExistingBooking) {
+        console.error("User has already booked this ride");
         toast.error("You have already booked this ride");
         return { success: false };
       }
@@ -39,16 +44,19 @@ export const useBookRide = (rideId: string) => {
       // Check available seats
       const ride = await databaseService.fetchRideById(rideId);
       if (!ride || ride.availableSeats < formData.seats) {
+        console.error(`Not enough seats available. Requested: ${formData.seats}, Available: ${ride?.availableSeats || 0}`);
         toast.error(`Only ${ride?.availableSeats || 0} seats available`);
         return { success: false };
       }
 
       // Book the ride
+      console.log("Calling databaseService.bookRide");
       const success = await databaseService.bookRide(rideId, user.id, formData);
       
       if (success) {
+        console.log("Booking successful, fetching booking ID");
         // Fetch the booking ID for the newly created booking
-        const { data: newBooking } = await supabase
+        const { data: newBooking, error } = await supabase
           .from('bookings')
           .select('id')
           .eq('ride_id', rideId)
@@ -57,11 +65,17 @@ export const useBookRide = (rideId: string) => {
           .limit(1)
           .single();
         
+        if (error) {
+          console.error("Error fetching booking ID:", error);
+        }
+        
         if (newBooking) {
+          console.log("New booking ID:", newBooking.id);
           setBookingId(newBooking.id);
         }
         
         // Fetch the updated ride details
+        console.log("Fetching updated ride details");
         const updatedRide = await databaseService.fetchRideById(rideId);
         
         setBookingSuccess(true);
@@ -70,6 +84,8 @@ export const useBookRide = (rideId: string) => {
           bookingId: newBooking?.id,
           updatedRide 
         };
+      } else {
+        console.error("databaseService.bookRide returned false");
       }
       
       return { success: false };
