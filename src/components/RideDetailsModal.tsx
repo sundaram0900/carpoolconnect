@@ -4,9 +4,6 @@ import { Ride } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import RideDetailsModalTabs from "./RideDetailsModalTabs";
@@ -19,7 +16,6 @@ interface RideDetailsModalProps {
   isOpenByDefault?: boolean;
   onClose?: () => void;
   onRideUpdate?: (updatedRide: Ride) => void;
-  trigger?: React.ReactNode;
 }
 
 const RideDetailsModal = ({ 
@@ -27,8 +23,7 @@ const RideDetailsModal = ({
   isOpen: externalIsOpen, 
   isOpenByDefault = false,
   onClose: externalOnClose,
-  onRideUpdate,
-  trigger
+  onRideUpdate
 }: RideDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : isOpenByDefault);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
@@ -50,7 +45,6 @@ const RideDetailsModal = ({
   }, [externalOnClose]);
   
   const handleBookClick = () => {
-    console.log("Book button clicked");
     setIsBookModalOpen(true);
   };
   
@@ -59,24 +53,20 @@ const RideDetailsModal = ({
   };
   
   const handleBookRide = async (formData: any) => {
-    console.log("Attempting to book ride with form data:", formData);
     const result = await bookRide(formData);
     
     if (result.success) {
-      console.log("Booking successful:", result);
       setIsBookModalOpen(false);
       
       // Only redirect if not already on the ride details page
       if (!isOpenByDefault) {
         // Pass booking information to the ride details page
-        navigate(`/ride/${ride.id}?booking_success=true&booking_id=${result.bookingId || ''}`, {replace: true});
+        navigate(`/ride/${ride.id}?booking_success=true&booking_id=${result.bookingId || ''}`);
         handleClose();
       } else if (onRideUpdate && result.updatedRide) {
         // If we're already on the ride details page, update the ride data
         onRideUpdate(result.updatedRide);
       }
-    } else {
-      console.error("Booking failed:", result);
     }
     
     return result;
@@ -91,12 +81,7 @@ const RideDetailsModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
         <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Ride Details</DialogTitle>
-            <DialogDescription>View details about this ride</DialogDescription>
-          </DialogHeader>
           <div className="p-6">
             <RideDetailsModalTabs 
               ride={ride} 
