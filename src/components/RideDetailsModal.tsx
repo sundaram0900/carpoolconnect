@@ -4,8 +4,7 @@ import { Ride } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
-  DialogDescription
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import RideDetailsModalTabs from "./RideDetailsModalTabs";
@@ -85,12 +84,8 @@ const RideDetailsModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        {trigger && <DialogTitle asChild>{trigger}</DialogTitle>}
+        {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
         <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
-          <div className="sr-only">
-            <DialogTitle>Ride Details</DialogTitle>
-            <DialogDescription>View and manage ride details</DialogDescription>
-          </div>
           <div className="p-6">
             <RideDetailsModalTabs 
               ride={ride} 

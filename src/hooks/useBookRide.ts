@@ -47,35 +47,29 @@ export const useBookRide = (rideId: string) => {
       const success = await databaseService.bookRide(rideId, user.id, formData);
       
       if (success) {
-        try {
-          // Fetch the booking ID for the newly created booking
-          const { data: newBooking } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('ride_id', rideId)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (newBooking) {
-            setBookingId(newBooking.id);
-          }
-          
-          // Fetch the updated ride details
-          const updatedRide = await databaseService.fetchRideById(rideId);
-          
-          setBookingSuccess(true);
-          return { 
-            success: true, 
-            bookingId: newBooking?.id,
-            updatedRide 
-          };
-        } catch (error) {
-          console.error("Error fetching booking or updated ride:", error);
-          // Even if there's an error getting the booking ID, the booking was successful
-          return { success: true };
+        // Fetch the booking ID for the newly created booking
+        const { data: newBooking } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('ride_id', rideId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (newBooking) {
+          setBookingId(newBooking.id);
         }
+        
+        // Fetch the updated ride details
+        const updatedRide = await databaseService.fetchRideById(rideId);
+        
+        setBookingSuccess(true);
+        return { 
+          success: true, 
+          bookingId: newBooking?.id,
+          updatedRide 
+        };
       }
       
       return { success: false };

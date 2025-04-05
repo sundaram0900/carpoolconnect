@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User, RideStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -181,8 +180,7 @@ export const databaseService = {
         return false;
       }
 
-      // Make sure booked_by is an array before checking if it includes userId
-      return Array.isArray(ride.booked_by) && ride.booked_by.includes(userId);
+      return Array.isArray(ride.booked_by) && ride.booked_by.includes(userId) || false;
     } catch (error) {
       console.error("Error in checkExistingBooking:", error);
       return false;
@@ -270,7 +268,7 @@ export const databaseService = {
 
       // Update ride available seats and booked_by array
       const newAvailableSeats = ride.available_seats - formData.seats;
-      const updatedBookedBy = [...bookedBy];
+      let updatedBookedBy = [...bookedBy];
       
       if (!updatedBookedBy.includes(userId)) {
         updatedBookedBy.push(userId);
