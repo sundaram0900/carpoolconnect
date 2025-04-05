@@ -72,32 +72,6 @@ const RideDetailsModalTabs = ({
     chatWithUser = ride.driver;
   }
 
-  // Set up real-time subscription for ride changes
-  useEffect(() => {
-    if (!ride.id) return;
-
-    const channel = supabase
-      .channel('public:rides')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'rides',
-          filter: `id=eq.${ride.id}`
-        },
-        (payload) => {
-          console.log('Ride updated:', payload);
-          refreshRideData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [ride.id]);
-
   const refreshRideData = async () => {
     if (!ride.id) return;
     
@@ -106,11 +80,9 @@ const RideDetailsModalTabs = ({
       const updatedRide = await databaseService.fetchRideById(ride.id);
       if (updatedRide && onRideUpdate) {
         onRideUpdate(updatedRide);
-        toast.success("Ride information updated");
       }
     } catch (error) {
       console.error("Failed to refresh ride data:", error);
-      toast.error("Failed to refresh ride data");
     } finally {
       setRefreshing(false);
     }
@@ -284,18 +256,6 @@ const RideDetailsModalTabs = ({
               <div className="font-medium">{ride.carInfo?.make} {ride.carInfo?.model}</div>
             </div>
           </div>
-
-          {ride.bookedBy && ride.bookedBy.length > 0 && !isDriver && (
-            <div className="bg-primary/10 p-4 rounded-lg">
-              <h4 className="font-medium mb-2 flex items-center">
-                <Users className="h-4 w-4 mr-2" />
-                Other Passengers
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                This ride has {ride.bookedBy.length} {ride.bookedBy.length === 1 ? 'passenger' : 'passengers'} (including you if you've booked).
-              </p>
-            </div>
-          )}
           
           <div className="flex justify-between items-center pt-4">
             <div className="flex items-center space-x-3">

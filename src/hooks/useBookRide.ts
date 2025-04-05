@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { databaseService } from "@/lib/services/database";
 import { useAuth } from "@/lib/context/AuthContext";
-import { BookingFormData, Ride } from "@/lib/types";
+import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,7 +13,7 @@ export const useBookRide = (rideId: string) => {
   const [bookingId, setBookingId] = useState<string | undefined>(undefined);
   const { user } = useAuth();
 
-  const bookRide = async (formData: BookingFormData): Promise<{ success: boolean; bookingId?: string; updatedRide?: Ride }> => {
+  const bookRide = async (formData: BookingFormData): Promise<{ success: boolean; bookingId?: string }> => {
     if (!user) {
       toast.error("You must be logged in to book a ride");
       return { success: false };
@@ -36,13 +36,6 @@ export const useBookRide = (rideId: string) => {
         return { success: false };
       }
 
-      // Check available seats
-      const ride = await databaseService.fetchRideById(rideId);
-      if (!ride || ride.availableSeats < formData.seats) {
-        toast.error(`Only ${ride?.availableSeats || 0} seats available`);
-        return { success: false };
-      }
-
       // Book the ride
       const success = await databaseService.bookRide(rideId, user.id, formData);
       
@@ -61,15 +54,8 @@ export const useBookRide = (rideId: string) => {
           setBookingId(newBooking.id);
         }
         
-        // Fetch the updated ride details
-        const updatedRide = await databaseService.fetchRideById(rideId);
-        
         setBookingSuccess(true);
-        return { 
-          success: true, 
-          bookingId: newBooking?.id,
-          updatedRide 
-        };
+        return { success: true, bookingId: newBooking?.id };
       }
       
       return { success: false };

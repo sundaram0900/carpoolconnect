@@ -1,101 +1,237 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { Ride } from "@/lib/types";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
-import RideDetailsModalTabs from "./RideDetailsModalTabs";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { Ride, BookingFormData } from "@/lib/types";
+import { formatDate, formatTime, formatPrice, getAvatarUrl, calculateDistance, calculateDuration } from "@/lib/utils";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Calendar, Clock, MapPin, Users, IndianRupee, Route, Car, Info } from "lucide-react";
+import DriverDetails from "./DriverDetails";
 import BookRideModal from "./BookRideModal";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { useBookRide } from "@/hooks/useBookRide";
 
 interface RideDetailsModalProps {
   ride: Ride;
-  isOpen?: boolean;
+  trigger?: React.ReactNode;
   isOpenByDefault?: boolean;
-  onClose?: () => void;
-  onRideUpdate?: (updatedRide: Ride) => void;
 }
 
-const RideDetailsModal = ({ 
-  ride, 
-  isOpen: externalIsOpen, 
-  isOpenByDefault = false,
-  onClose: externalOnClose,
-  onRideUpdate
-}: RideDetailsModalProps) => {
-  const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : isOpenByDefault);
-  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetailsModalProps) => {
+  const [isOpen, setIsOpen] = useState(isOpenByDefault);
+  const [activeTab, setActiveTab] = useState("details");
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { bookRide, isBooking } = useBookRide(ride.id);
   
-  // Open/close the modal based on external props
+  const distance = calculateDistance(ride.startLocation, ride.endLocation);
+  const duration = calculateDuration(distance);
+
+  // Set isOpen to true if isOpenByDefault changes
   useEffect(() => {
-    if (externalIsOpen !== undefined) {
-      setIsOpen(externalIsOpen);
+    if (isOpenByDefault) {
+      setIsOpen(true);
     }
-  }, [externalIsOpen]);
-  
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-    if (externalOnClose) {
-      externalOnClose();
+  }, [isOpenByDefault]);
+
+  const handleOpenBooking = () => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to book a ride");
+      navigate("/auth");
+      return;
     }
-  }, [externalOnClose]);
-  
-  const handleBookClick = () => {
-    setIsBookModalOpen(true);
+    
+    setIsBookingModalOpen(true);
   };
-  
-  const handleBookModalClose = () => {
-    setIsBookModalOpen(false);
-  };
-  
-  const handleBookRide = async (formData: any) => {
+
+  const handleBookRide = async (formData: BookingFormData): Promise<{ success: boolean, bookingId?: string }> => {
+    if (!user) return { success: false };
+    
     const result = await bookRide(formData);
     
     if (result.success) {
-      setIsBookModalOpen(false);
-      
-      // Only redirect if not already on the ride details page
-      if (!isOpenByDefault) {
-        // Pass booking information to the ride details page
-        navigate(`/ride/${ride.id}?booking_success=true&booking_id=${result.bookingId || ''}`);
-        handleClose();
-      } else if (onRideUpdate && result.updatedRide) {
-        // If we're already on the ride details page, update the ride data
-        onRideUpdate(result.updatedRide);
-      }
+      setIsBookingModalOpen(false);
+      toast.success("Ride booked successfully! It will appear in your profile.");
+      setTimeout(() => {
+        setIsOpen(false);
+        // If we're on the ride details page, navigate back to search after booking
+        if (isOpenByDefault) {
+          navigate("/search");
+        }
+      }, 1500);
     }
     
     return result;
   };
-  
-  const handleRideUpdate = (updatedRide: Ride) => {
-    if (onRideUpdate) {
-      onRideUpdate(updatedRide);
-    }
-  };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
-          <div className="p-6">
-            <RideDetailsModalTabs 
-              ride={ride} 
-              onBookClick={handleBookClick}
-              onRideUpdate={handleRideUpdate}
-            />
-          </div>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        // If closed and we're on ride details page, navigate back to search
+        if (!open && isOpenByDefault) {
+          navigate("/search");
+        }
+      }}>
+        <DialogTrigger asChild>
+          {!isOpenByDefault && (trigger || <Button variant="link">View Details</Button>)}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl flex flex-col sm:flex-row sm:items-center gap-2">
+              <span>
+                {ride.startLocation.city} to {ride.endLocation.city}
+              </span>
+              <Badge className="sm:ml-2 w-fit">{ride.status}</Badge>
+            </DialogTitle>
+            <DialogDescription>
+              {formatDate(ride.date)} at {formatTime(ride.time)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="details">Ride Details</TabsTrigger>
+              <TabsTrigger value="driver">Driver Profile</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="min-w-8 flex flex-col items-center">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="h-14 border-l border-dashed border-primary/30 my-1"></div>
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-primary" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="mb-3">
+                      <div className="font-medium">{ride.startLocation.address}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ride.startLocation.city}, {ride.startLocation.state}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="font-medium">{ride.endLocation.address}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ride.endLocation.city}, {ride.endLocation.state}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Calendar className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Date</div>
+                    <div className="font-medium">{formatDate(ride.date)}</div>
+                  </div>
+                  
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Clock className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Time</div>
+                    <div className="font-medium">{formatTime(ride.time)}</div>
+                  </div>
+                  
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Route className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Distance</div>
+                    <div className="font-medium">{distance} km</div>
+                  </div>
+                  
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Clock className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Duration</div>
+                    <div className="font-medium">{duration} min</div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <IndianRupee className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Price per seat</div>
+                    <div className="font-medium">{formatPrice(ride.price)}</div>
+                  </div>
+                  
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Users className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Available seats</div>
+                    <div className="font-medium">{ride.availableSeats}</div>
+                  </div>
+                  
+                  <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
+                    <Car className="h-5 w-5 mb-1 text-primary" />
+                    <div className="text-sm text-muted-foreground">Vehicle</div>
+                    <div className="font-medium">{ride.carInfo?.make} {ride.carInfo?.model}</div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-4">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={getAvatarUrl(ride.driver)} alt={ride.driver.name} />
+                      <AvatarFallback>{ride.driver.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{ride.driver.name}</div>
+                      <div className="flex items-center text-amber-500 text-sm">
+                        ★ {formatPrice(ride.driver.rating || 5.0)}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button size="sm" variant="outline" onClick={() => setActiveTab("driver")}>
+                    <Info className="h-4 w-4 mr-1" />
+                    Driver Info
+                  </Button>
+                </div>
+                
+                <div className="pt-4">
+                  <Button className="w-full" onClick={handleOpenBooking}>
+                    Book This Ride
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="driver">
+              <DriverDetails driver={ride.driver} ride={ride} />
+              
+              <div className="mt-6">
+                <Button className="w-full" onClick={handleOpenBooking}>
+                  Book This Ride
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
       
       <BookRideModal
         ride={ride}
-        isOpen={isBookModalOpen}
-        onClose={handleBookModalClose}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
         onBook={handleBookRide}
       />
     </>
