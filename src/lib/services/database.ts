@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -112,7 +111,6 @@ export const databaseService = {
         return [];
       }
       
-      // Map the ride data using mapDbRideToRide
       return data.map(booking => ({
         ...booking,
         ride: mapDbRideToRide(booking.ride)
@@ -151,7 +149,6 @@ export const databaseService = {
         return null;
       }
       
-      // Convert base64 to blob
       const byteCharacters = atob(data.pdf);
       const byteNumbers = new Array(byteCharacters.length);
       
@@ -188,7 +185,6 @@ export const databaseService = {
     }
   },
   
-  // Check if user is the driver of the ride
   async isUserDriverOfRide(rideId: string, userId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
@@ -212,7 +208,6 @@ export const databaseService = {
   
   async bookRide(rideId: string, userId: string, formData: BookingFormData): Promise<boolean> {
     try {
-      // Check if user is the driver of this ride
       const isDriver = await this.isUserDriverOfRide(rideId, userId);
       if (isDriver) {
         console.error("Driver cannot book their own ride");
@@ -220,7 +215,6 @@ export const databaseService = {
         return false;
       }
       
-      // First, check if there are enough seats available
       const { data: ride, error: rideError } = await supabase
         .from("rides")
         .select("available_seats")
@@ -238,8 +232,6 @@ export const databaseService = {
         return false;
       }
       
-      // Start a transaction by using a stored procedure or multiple operations in sequence
-      // Create a booking
       const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
@@ -257,7 +249,6 @@ export const databaseService = {
         return false;
       }
       
-      // Update ride's available seats
       const newAvailableSeats = ride.available_seats - formData.seats;
       const { error: updateError } = await supabase
         .from("rides")
@@ -266,10 +257,8 @@ export const databaseService = {
       
       if (updateError) {
         console.error("Error updating ride seats:", updateError);
-        // Don't return false here, as the booking was already created
       }
       
-      // Add user to booked_by array
       const { error: bookedByError } = await supabase
         .rpc('add_user_to_booked_by', {
           ride_id: rideId,
@@ -278,7 +267,6 @@ export const databaseService = {
       
       if (bookedByError) {
         console.error("Error updating booked_by array:", bookedByError);
-        // Don't return false here either
       }
       
       toast.success("Ride booked successfully!");
@@ -289,7 +277,7 @@ export const databaseService = {
       return false;
     }
   },
-
+  
   async fetchRideBookings(rideId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
@@ -314,7 +302,6 @@ export const databaseService = {
   
   async cancelBooking(bookingId: string, userId: string): Promise<boolean> {
     try {
-      // First, get the booking details to check if user is authorized and get seat count
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .select(`
@@ -332,7 +319,6 @@ export const databaseService = {
         return false;
       }
       
-      // Check if user is authorized to cancel (is the booking user or the ride driver)
       const isBookingUser = booking.user_id === userId;
       const isRideDriver = booking.ride.driver_id === userId;
       
@@ -341,7 +327,6 @@ export const databaseService = {
         return false;
       }
       
-      // Delete the booking
       const { error: deleteError } = await supabase
         .from("bookings")
         .delete()
@@ -353,7 +338,6 @@ export const databaseService = {
         return false;
       }
       
-      // Return the seats to the available pool
       const newAvailableSeats = booking.ride.available_seats + booking.seats;
       const { error: updateError } = await supabase
         .from("rides")
@@ -362,10 +346,8 @@ export const databaseService = {
       
       if (updateError) {
         console.error("Error updating ride seats:", updateError);
-        // Don't return false here as the booking was already deleted
       }
       
-      // Remove user from booked_by array if they no longer have any active bookings for this ride
       const { data: remainingBookings } = await supabase
         .from("bookings")
         .select("id")
@@ -373,7 +355,6 @@ export const databaseService = {
         .eq("user_id", booking.user_id);
       
       if (!remainingBookings || remainingBookings.length === 0) {
-        // User has no more bookings for this ride, remove from booked_by
         const { error: bookedByError } = await supabase
           .from("rides")
           .update({
@@ -395,9 +376,84 @@ export const databaseService = {
     }
   },
   
+  async createRide(data: any, userId: string): Promise<string | null> {
+    try {
+      const { data: ride, error } = await supabase
+        .from("rides")
+        .insert({
+          driver_id: userId,
+          start_address: data.startAddress,
+          start_city: data.startCity,
+          start_state: data.startState || null,
+          end_address: data.endAddress,
+          end_city: data.endCity,
+          end_state: data.endState || null,
+          date: data.date,
+          time: data.time,
+          available_seats: data.availableSeats,
+          price: data.price,
+          car_make: data.carMake || null,
+          car_model: data.carModel || null,
+          car_year: data.carYear || null,
+          car_color: data.carColor || null,
+          description: data.description || null,
+          status: 'scheduled'
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error("Error creating ride:", error);
+        toast.error("Failed to create ride");
+        return null;
+      }
+      
+      return ride.id;
+    } catch (error) {
+      console.error("Error in createRide:", error);
+      toast.error("An unexpected error occurred");
+      return null;
+    }
+  },
+  
+  async createRideRequest(data: any, userId: string): Promise<string | null> {
+    try {
+      const { data: request, error } = await supabase
+        .from("ride_requests")
+        .insert({
+          user_id: userId,
+          start_address: data.startAddress,
+          start_city: data.startCity,
+          start_state: data.startState || null,
+          end_address: data.endAddress,
+          end_city: data.endCity,
+          end_state: data.endState || null,
+          date: data.date,
+          time: data.time,
+          number_of_seats: data.numberOfSeats,
+          max_price: data.maxPrice || null,
+          description: data.description || null,
+          status: 'open'
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error("Error creating ride request:", error);
+        toast.error("Failed to create ride request");
+        return null;
+      }
+      
+      return request.id;
+    } catch (error) {
+      console.error("Error in createRideRequest:", error);
+      toast.error("An unexpected error occurred");
+      return null;
+    }
+  },
+  
   async uploadProfilePicture(userId: string, file: File): Promise<User | null> {
     try {
-      // Upload the file to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -411,7 +467,6 @@ export const databaseService = {
         return null;
       }
       
-      // Get the public URL of the uploaded file
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
@@ -421,7 +476,6 @@ export const databaseService = {
         return null;
       }
       
-      // Update the user profile with the new avatar URL
       const { data, error } = await supabase
         .from("profiles")
         .update({ avatar: urlData.publicUrl })

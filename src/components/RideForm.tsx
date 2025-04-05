@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,8 +21,10 @@ import { useAuth } from "@/lib/context/AuthContext";
 const formSchema = z.object({
   startCity: z.string().min(1, "Start city is required"),
   startAddress: z.string().min(1, "Start address is required"),
+  startState: z.string().optional(),
   endCity: z.string().min(1, "Destination city is required"),
   endAddress: z.string().min(1, "Destination address is required"),
+  endState: z.string().optional(),
   date: z.date(),
   time: z.string().min(1, "Time is required"),
   availableSeats: z.string().min(1, "Available seats is required"),
@@ -49,8 +52,10 @@ const RideForm = ({ type }: RideFormProps) => {
     defaultValues: {
       startCity: "",
       startAddress: "",
+      startState: "",
       endCity: "",
       endAddress: "",
+      endState: "",
       date: new Date(),
       time: "09:00",
       availableSeats: "2",
@@ -74,6 +79,7 @@ const RideForm = ({ type }: RideFormProps) => {
 
     try {
       if (type === "offer") {
+        console.log("Submitting ride offer data:", data);
         const result = await databaseService.createRide({
           ...data,
           date: format(data.date, "yyyy-MM-dd"),
@@ -89,11 +95,14 @@ const RideForm = ({ type }: RideFormProps) => {
           toast.error("Failed to post ride offer");
         }
       } else {
+        console.log("Submitting ride request data:", data);
         const result = await databaseService.createRideRequest({
           startCity: data.startCity,
           startAddress: data.startAddress,
+          startState: data.startState,
           endCity: data.endCity,
           endAddress: data.endAddress,
+          endState: data.endState,
           date: format(data.date, "yyyy-MM-dd"),
           time: data.time,
           numberOfSeats: parseInt(data.availableSeats),
@@ -156,6 +165,23 @@ const RideForm = ({ type }: RideFormProps) => {
                   )}
                 />
               </div>
+              
+              <FormField
+                control={form.control}
+                name="startState"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Start State (Optional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter start state" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -191,6 +217,23 @@ const RideForm = ({ type }: RideFormProps) => {
                   )}
                 />
               </div>
+              
+              <FormField
+                control={form.control}
+                name="endState"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Destination State (Optional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter destination state" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
