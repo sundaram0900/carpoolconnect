@@ -90,7 +90,6 @@ export const rideService = {
     }
   },
 
-  // Add missing methods referenced in RideDetailsModalTabs
   async startRide(rideId: string): Promise<boolean> {
     try {
       const { error } = await supabase

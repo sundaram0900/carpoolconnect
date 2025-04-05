@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -23,22 +22,25 @@ import BookRideModal from "./BookRideModal";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useBookRide } from "@/hooks/useBookRide";
+import { databaseService } from "@/lib/services/database";
 
 interface RideDetailsModalProps {
   ride: Ride;
   trigger?: React.ReactNode;
   isOpenByDefault?: boolean;
+  onRideUpdate?: (updatedRide: Ride) => void;
 }
 
-const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetailsModalProps) => {
+const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false, onRideUpdate }: RideDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
   const [activeTab, setActiveTab] = useState("details");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [currentRide, setCurrentRide] = useState<Ride>(ride);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  const { bookRide, isBooking } = useBookRide(ride.id);
+  const { bookRide, isBooking } = useBookRide(currentRide.id);
   
-  const distance = calculateDistance(ride.startLocation, ride.endLocation);
+  const distance = calculateDistance(currentRide.startLocation, currentRide.endLocation);
   const duration = calculateDuration(distance);
 
   // Set isOpen to true if isOpenByDefault changes
@@ -47,6 +49,27 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
       setIsOpen(true);
     }
   }, [isOpenByDefault]);
+
+  // Update current ride when prop changes
+  useEffect(() => {
+    setCurrentRide(ride);
+  }, [ride]);
+
+  const refreshRideData = async () => {
+    if (!currentRide.id) return;
+    
+    try {
+      const updatedRide = await databaseService.fetchRideById(currentRide.id);
+      if (updatedRide) {
+        setCurrentRide(updatedRide);
+        if (onRideUpdate) {
+          onRideUpdate(updatedRide);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh ride data:", error);
+    }
+  };
 
   const handleOpenBooking = () => {
     if (!isAuthenticated) {
@@ -66,6 +89,10 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
     if (result.success) {
       setIsBookingModalOpen(false);
       toast.success("Ride booked successfully! It will appear in your profile.");
+      
+      // Refresh ride data to get updated seat count
+      await refreshRideData();
+      
       setTimeout(() => {
         setIsOpen(false);
         // If we're on the ride details page, navigate back to search after booking
@@ -94,12 +121,12 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
           <DialogHeader>
             <DialogTitle className="text-xl sm:text-2xl flex flex-col sm:flex-row sm:items-center gap-2">
               <span>
-                {ride.startLocation.city} to {ride.endLocation.city}
+                {currentRide.startLocation.city} to {currentRide.endLocation.city}
               </span>
-              <Badge className="sm:ml-2 w-fit">{ride.status}</Badge>
+              <Badge className="sm:ml-2 w-fit">{currentRide.status}</Badge>
             </DialogTitle>
             <DialogDescription>
-              {formatDate(ride.date)} at {formatTime(ride.time)}
+              {formatDate(currentRide.date)} at {formatTime(currentRide.time)}
             </DialogDescription>
           </DialogHeader>
 
@@ -124,16 +151,16 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
                   
                   <div className="flex-1">
                     <div className="mb-3">
-                      <div className="font-medium">{ride.startLocation.address}</div>
+                      <div className="font-medium">{currentRide.startLocation.address}</div>
                       <div className="text-sm text-muted-foreground">
-                        {ride.startLocation.city}, {ride.startLocation.state}
+                        {currentRide.startLocation.city}, {currentRide.startLocation.state}
                       </div>
                     </div>
                     
                     <div>
-                      <div className="font-medium">{ride.endLocation.address}</div>
+                      <div className="font-medium">{currentRide.endLocation.address}</div>
                       <div className="text-sm text-muted-foreground">
-                        {ride.endLocation.city}, {ride.endLocation.state}
+                        {currentRide.endLocation.city}, {currentRide.endLocation.state}
                       </div>
                     </div>
                   </div>
@@ -143,13 +170,13 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
                     <Calendar className="h-5 w-5 mb-1 text-primary" />
                     <div className="text-sm text-muted-foreground">Date</div>
-                    <div className="font-medium">{formatDate(ride.date)}</div>
+                    <div className="font-medium">{formatDate(currentRide.date)}</div>
                   </div>
                   
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
                     <Clock className="h-5 w-5 mb-1 text-primary" />
                     <div className="text-sm text-muted-foreground">Time</div>
-                    <div className="font-medium">{formatTime(ride.time)}</div>
+                    <div className="font-medium">{formatTime(currentRide.time)}</div>
                   </div>
                   
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
@@ -171,32 +198,32 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
                     <IndianRupee className="h-5 w-5 mb-1 text-primary" />
                     <div className="text-sm text-muted-foreground">Price per seat</div>
-                    <div className="font-medium">{formatPrice(ride.price)}</div>
+                    <div className="font-medium">{formatPrice(currentRide.price)}</div>
                   </div>
                   
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
                     <Users className="h-5 w-5 mb-1 text-primary" />
                     <div className="text-sm text-muted-foreground">Available seats</div>
-                    <div className="font-medium">{ride.availableSeats}</div>
+                    <div className="font-medium">{currentRide.availableSeats}</div>
                   </div>
                   
                   <div className="bg-secondary/50 p-3 rounded-lg flex flex-col items-center">
                     <Car className="h-5 w-5 mb-1 text-primary" />
                     <div className="text-sm text-muted-foreground">Vehicle</div>
-                    <div className="font-medium">{ride.carInfo?.make} {ride.carInfo?.model}</div>
+                    <div className="font-medium">{currentRide.carInfo?.make} {currentRide.carInfo?.model}</div>
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-center pt-4">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={getAvatarUrl(ride.driver)} alt={ride.driver.name} />
-                      <AvatarFallback>{ride.driver.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={getAvatarUrl(currentRide.driver)} alt={currentRide.driver.name} />
+                      <AvatarFallback>{currentRide.driver.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{ride.driver.name}</div>
+                      <div className="font-medium">{currentRide.driver.name}</div>
                       <div className="flex items-center text-amber-500 text-sm">
-                        ★ {formatPrice(ride.driver.rating || 5.0)}
+                        ★ {formatPrice(currentRide.driver.rating || 5.0)}
                       </div>
                     </div>
                   </div>
@@ -208,20 +235,40 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
                 </div>
                 
                 <div className="pt-4">
-                  <Button className="w-full" onClick={handleOpenBooking}>
-                    Book This Ride
-                  </Button>
+                  {currentRide.availableSeats > 0 && currentRide.status === 'scheduled' ? (
+                    <Button className="w-full" onClick={handleOpenBooking}>
+                      Book This Ride
+                    </Button>
+                  ) : currentRide.availableSeats === 0 ? (
+                    <Button className="w-full" disabled>
+                      No Seats Available
+                    </Button>
+                  ) : currentRide.status !== 'scheduled' ? (
+                    <Button className="w-full" disabled>
+                      Ride {currentRide.status}
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </TabsContent>
             
             <TabsContent value="driver">
-              <DriverDetails driver={ride.driver} ride={ride} />
+              <DriverDetails driver={currentRide.driver} ride={currentRide} />
               
               <div className="mt-6">
-                <Button className="w-full" onClick={handleOpenBooking}>
-                  Book This Ride
-                </Button>
+                {currentRide.availableSeats > 0 && currentRide.status === 'scheduled' ? (
+                  <Button className="w-full" onClick={handleOpenBooking}>
+                    Book This Ride
+                  </Button>
+                ) : currentRide.availableSeats === 0 ? (
+                  <Button className="w-full" disabled>
+                    No Seats Available
+                  </Button>
+                ) : currentRide.status !== 'scheduled' ? (
+                  <Button className="w-full" disabled>
+                    Ride {currentRide.status}
+                  </Button>
+                ) : null}
               </div>
             </TabsContent>
           </Tabs>
@@ -229,7 +276,7 @@ const RideDetailsModal = ({ ride, trigger, isOpenByDefault = false }: RideDetail
       </Dialog>
       
       <BookRideModal
-        ride={ride}
+        ride={currentRide}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         onBook={handleBookRide}

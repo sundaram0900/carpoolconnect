@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -218,7 +217,7 @@ export const databaseService = {
       
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("available_seats")
+        .select("available_seats, status")
         .eq("id", rideId)
         .single();
       
@@ -250,10 +249,9 @@ export const databaseService = {
         return false;
       }
       
-      // Calculate new available seats
       const newAvailableSeats = ride.available_seats - formData.seats;
+      console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Update ride status to 'booked' if no seats remaining
       const updateData: any = { available_seats: newAvailableSeats };
       if (newAvailableSeats === 0) {
         updateData.status = 'booked';
@@ -266,6 +264,8 @@ export const databaseService = {
       
       if (updateError) {
         console.error("Error updating ride seats:", updateError);
+        toast.error("Booking created but seat count update failed");
+        return false;
       }
       
       const { error: bookedByError } = await supabase
@@ -347,10 +347,9 @@ export const databaseService = {
         return false;
       }
       
-      // Calculate new available seats
       const newAvailableSeats = booking.ride.available_seats + booking.seats;
+      console.log(`Updating available seats from ${booking.ride.available_seats} to ${newAvailableSeats}`);
       
-      // Update ride data - restore status to 'scheduled' if it was 'booked'
       const updateData: any = { available_seats: newAvailableSeats };
       if (booking.ride.status === 'booked') {
         updateData.status = 'scheduled';
@@ -363,6 +362,8 @@ export const databaseService = {
       
       if (updateError) {
         console.error("Error updating ride seats:", updateError);
+        toast.error("Booking cancelled but seat count update failed");
+        return false;
       }
       
       const { data: remainingBookings } = await supabase
@@ -372,16 +373,11 @@ export const databaseService = {
         .eq("user_id", booking.user_id);
       
       if (!remainingBookings || remainingBookings.length === 0) {
-        // Use raw SQL query to remove user from booked_by array
         const { error: bookedByError } = await supabase
-          .from("rides")
-          .update({
-            booked_by: supabase.rpc('array_remove', { 
-              arr: booking.ride.booked_by, 
-              item: booking.user_id 
-            })
-          })
-          .eq("id", booking.ride_id);
+          .rpc('array_remove', { 
+            arr: booking.ride.booked_by, 
+            item: booking.user_id 
+          });
         
         if (bookedByError) {
           console.error("Error updating booked_by array:", bookedByError);
@@ -473,7 +469,6 @@ export const databaseService = {
     }
   },
   
-  // Add the missing updateUserProfile method
   async updateUserProfile(userId: string, userData: Partial<User>): Promise<boolean> {
     try {
       const { error } = await supabase

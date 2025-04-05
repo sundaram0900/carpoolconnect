@@ -107,10 +107,10 @@ const RideDetails = () => {
             </div>
           ) : null}
           
-          {/* We're reusing the RideDetailsModal component but forcing it to be open */}
           <RideDetailsModal 
             ride={ride} 
             isOpenByDefault={true} 
+            onRideUpdate={handleRideUpdate}
           />
         </motion.div>
       </div>
@@ -118,7 +118,6 @@ const RideDetails = () => {
   );
 };
 
-// Skeleton loader for ride details while data is being fetched
 const RideDetailsSkeleton = () => {
   return (
     <div className="bg-background border rounded-lg p-6 shadow-sm">
