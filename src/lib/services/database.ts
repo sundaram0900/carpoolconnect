@@ -126,7 +126,7 @@ export const databaseService = {
   async fetchUserReceipts(userId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_user_receipts', { user_id_param: userId as any });
+        .rpc('get_user_receipts', { user_id_param: userId });
         
       if (error) {
         console.error("Error fetching user receipts:", error);
@@ -143,7 +143,7 @@ export const databaseService = {
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
-        body: { receiptId } as any
+        body: { receiptId }
       });
       
       if (error || !data) {
@@ -223,7 +223,7 @@ export const databaseService = {
       // First, check if there are enough seats available
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("available_seats")
+        .select("available_seats, booked_by")
         .eq("id", rideId)
         .single();
       
@@ -259,26 +259,24 @@ export const databaseService = {
       
       // Update ride's available seats
       const newAvailableSeats = ride.available_seats - formData.seats;
+      
+      // Create or update the booked_by array
+      let bookedBy = ride.booked_by || [];
+      if (!bookedBy.includes(userId)) {
+        bookedBy.push(userId);
+      }
+      
       const { error: updateError } = await supabase
         .from("rides")
-        .update({ available_seats: newAvailableSeats })
+        .update({ 
+          available_seats: newAvailableSeats,
+          booked_by: bookedBy
+        })
         .eq("id", rideId);
       
       if (updateError) {
-        console.error("Error updating ride seats:", updateError);
+        console.error("Error updating ride:", updateError);
         // Don't return false here, as the booking was already created
-      }
-      
-      // Add user to booked_by array
-      const { error: bookedByError } = await supabase
-        .rpc('add_user_to_booked_by', {
-          ride_id: rideId,
-          user_id: userId
-        });
-      
-      if (bookedByError) {
-        console.error("Error updating booked_by array:", bookedByError);
-        // Don't return false here either
       }
       
       toast.success("Ride booked successfully!");
@@ -355,16 +353,14 @@ export const databaseService = {
       
       // Return the seats to the available pool
       const newAvailableSeats = booking.ride.available_seats + booking.seats;
-      const { error: updateError } = await supabase
+      
+      // Get current booked_by array to update it
+      const { data: currentRide } = await supabase
         .from("rides")
-        .update({ available_seats: newAvailableSeats })
-        .eq("id", booking.ride_id);
-      
-      if (updateError) {
-        console.error("Error updating ride seats:", updateError);
-        // Don't return false here as the booking was already deleted
-      }
-      
+        .select("booked_by")
+        .eq("id", booking.ride_id)
+        .single();
+        
       // Remove user from booked_by array if they no longer have any active bookings for this ride
       const { data: remainingBookings } = await supabase
         .from("bookings")
@@ -372,18 +368,25 @@ export const databaseService = {
         .eq("ride_id", booking.ride_id)
         .eq("user_id", booking.user_id);
       
+      let bookedBy = currentRide?.booked_by || [];
+      
       if (!remainingBookings || remainingBookings.length === 0) {
         // User has no more bookings for this ride, remove from booked_by
-        const { error: bookedByError } = await supabase
-          .from("rides")
-          .update({
-            booked_by: supabase.sql`array_remove(booked_by, ${booking.user_id})`
-          })
-          .eq("id", booking.ride_id);
-        
-        if (bookedByError) {
-          console.error("Error updating booked_by array:", bookedByError);
-        }
+        bookedBy = bookedBy.filter((id: string) => id !== booking.user_id);
+      }
+      
+      // Update the ride
+      const { error: updateError } = await supabase
+        .from("rides")
+        .update({ 
+          available_seats: newAvailableSeats,
+          booked_by: bookedBy
+        })
+        .eq("id", booking.ride_id);
+      
+      if (updateError) {
+        console.error("Error updating ride:", updateError);
+        // Don't return false here as the booking was already deleted
       }
       
       toast.success("Booking cancelled successfully");
@@ -437,6 +440,104 @@ export const databaseService = {
       return mapDbProfileToUser(data);
     } catch (error) {
       console.error("Error in uploadProfilePicture:", error);
+      return null;
+    }
+  },
+  
+  async createRide(rideData: any, userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from("rides")
+        .insert({
+          driver_id: userId,
+          start_address: rideData.startAddress,
+          start_city: rideData.startCity,
+          start_state: rideData.startState || null,
+          end_address: rideData.endAddress,
+          end_city: rideData.endCity,
+          end_state: rideData.endState || null,
+          date: rideData.date,
+          time: rideData.time,
+          available_seats: rideData.availableSeats,
+          price: rideData.price,
+          car_make: rideData.carMake || null,
+          car_model: rideData.carModel || null,
+          car_year: rideData.carYear || null,
+          car_color: rideData.carColor || null,
+          description: rideData.description || null,
+          booked_by: []
+        });
+        
+      if (error) {
+        console.error("Error creating ride:", error);
+        toast.error("Failed to create ride: " + error.message);
+        return false;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error in createRide:", error);
+      toast.error("Failed to create ride: " + (error.message || "Unknown error"));
+      return false;
+    }
+  },
+  
+  async createRideRequest(requestData: any, userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from("ride_requests")
+        .insert({
+          user_id: userId,
+          start_address: requestData.startAddress,
+          start_city: requestData.startCity,
+          start_state: requestData.startState || null,
+          end_address: requestData.endAddress,
+          end_city: requestData.endCity,
+          end_state: requestData.endState || null,
+          date: requestData.date,
+          time: requestData.time,
+          number_of_seats: requestData.numberOfSeats,
+          max_price: requestData.maxPrice || null,
+          description: requestData.description || null
+        });
+        
+      if (error) {
+        console.error("Error creating ride request:", error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error in createRideRequest:", error);
+      return false;
+    }
+  },
+  
+  async updateUserProfile(userId: string, profileData: Partial<User>): Promise<User | null> {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          name: profileData.name,
+          username: profileData.username,
+          bio: profileData.bio,
+          phone: profileData.phone,
+          address: profileData.address,
+          city: profileData.city,
+          zip_code: profileData.zipCode
+        })
+        .eq("id", userId)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error("Error updating profile:", error);
+        return null;
+      }
+      
+      return mapDbProfileToUser(data);
+    } catch (error) {
+      console.error("Error in updateUserProfile:", error);
       return null;
     }
   }
