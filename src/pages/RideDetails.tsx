@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Ride } from "@/lib/types";
@@ -112,7 +111,6 @@ const RideDetails = () => {
           <RideDetailsModal 
             ride={ride} 
             isOpenByDefault={true} 
-            onRideUpdate={handleRideUpdate} 
           />
         </motion.div>
       </div>

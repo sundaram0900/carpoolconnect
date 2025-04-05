@@ -125,7 +125,7 @@ export const databaseService = {
   async fetchUserReceipts(userId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_user_receipts', { user_id_param: userId as any });
+        .rpc('get_user_receipts', { user_id_param: userId });
         
       if (error) {
         console.error("Error fetching user receipts:", error);
@@ -142,7 +142,7 @@ export const databaseService = {
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
-        body: { receiptId } as any
+        body: { receiptId }
       });
       
       if (error || !data) {
@@ -372,10 +372,14 @@ export const databaseService = {
         .eq("user_id", booking.user_id);
       
       if (!remainingBookings || remainingBookings.length === 0) {
+        // Use raw SQL query to remove user from booked_by array
         const { error: bookedByError } = await supabase
           .from("rides")
           .update({
-            booked_by: supabase.sql`array_remove(booked_by, ${booking.user_id})`
+            booked_by: supabase.rpc('array_remove', { 
+              arr: booking.ride.booked_by, 
+              item: booking.user_id 
+            })
           })
           .eq("id", booking.ride_id);
         
@@ -466,6 +470,34 @@ export const databaseService = {
       console.error("Error in createRideRequest:", error);
       toast.error("An unexpected error occurred");
       return null;
+    }
+  },
+  
+  // Add the missing updateUserProfile method
+  async updateUserProfile(userId: string, userData: Partial<User>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name: userData.name,
+          phone: userData.phone,
+          bio: userData.bio,
+          address: userData.address,
+          city: userData.city,
+          zip_code: userData.zipCode,
+          avatar: userData.avatar
+        })
+        .eq("id", userId);
+      
+      if (error) {
+        console.error("Error updating profile:", error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error in updateUserProfile:", error);
+      return false;
     }
   },
   
