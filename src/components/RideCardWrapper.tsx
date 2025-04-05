@@ -6,6 +6,7 @@ import RideDetailsModal from "@/components/RideDetailsModal";
 import { Ride } from "@/lib/types";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Car } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface RideCardWrapperProps {
   ride: Ride;
@@ -28,17 +29,22 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
           variant="outline" 
           size="sm" 
           onClick={() => setIsModalOpen(true)}
-          className="gap-1"
+          className="gap-1 mr-2"
         >
-          {canBookRide ? (
-            <>
-              <Car className="h-4 w-4" />
-              View & Book
-            </>
-          ) : (
-            "View Details"
-          )}
+          View Details
         </Button>
+        
+        {canBookRide && (
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="gap-1"
+          >
+            <Car className="h-4 w-4" />
+            Book Ride
+          </Button>
+        )}
       </div>
       <RideDetailsModal 
         ride={ride} 

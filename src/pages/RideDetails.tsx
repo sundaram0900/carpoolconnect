@@ -1,13 +1,11 @@
-
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Ride } from "@/lib/types";
 import { databaseService } from "@/lib/services/database";
 import { Loader2 } from "lucide-react";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import BookingSuccessCard from "@/components/BookingSuccessCard";
 import { motion } from "framer-motion";
-import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -50,7 +48,7 @@ const RideDetails = () => {
 
   useEffect(() => {
     loadRideDetails();
-  }, [rideId, navigate]);
+  }, [rideId]);
 
   const handleRideUpdate = (updatedRide: Ride) => {
     setRide(updatedRide);
@@ -78,7 +76,7 @@ const RideDetails = () => {
             <h2 className="text-xl font-semibold text-destructive mb-2">Error</h2>
             <p>{loadError}</p>
             <button 
-              onClick={() => window.location.reload()} 
+              onClick={loadRideDetails} 
               className="mt-4 bg-primary text-white px-4 py-2 rounded-md"
             >
               Try Again
