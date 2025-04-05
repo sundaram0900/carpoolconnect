@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User, RideStatus } from "@/lib/types";
 import { toast } from "sonner";
@@ -215,6 +214,8 @@ export const databaseService = {
     formData: BookingFormData
   ): Promise<boolean> {
     try {
+      console.log("Starting bookRide process for ride:", rideId, "user:", userId);
+      
       const isDriver = await this.isUserDriverOfRide(rideId, userId);
       if (isDriver) {
         console.error("Driver cannot book their own ride");
@@ -224,7 +225,7 @@ export const databaseService = {
 
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("available_seats, booked_by")
+        .select("available_seats, booked_by, status")
         .eq("id", rideId)
         .single();
       
@@ -234,11 +235,20 @@ export const databaseService = {
         return false;
       }
       
+      if (ride.status !== 'scheduled') {
+        toast.error(`This ride is no longer available for booking`);
+        return false;
+      }
+      
       if (ride.available_seats < formData.seats) {
         toast.error(`Only ${ride.available_seats} seats available`);
         return false;
       }
 
+      // Make sure booked_by is an array
+      const bookedBy = Array.isArray(ride.booked_by) ? ride.booked_by : [];
+      
+      // Create booking record
       const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
@@ -256,12 +266,15 @@ export const databaseService = {
         return false;
       }
 
+      // Update ride available seats and booked_by array
       const newAvailableSeats = ride.available_seats - formData.seats;
-      let updatedBookedBy = [...(ride.booked_by || [])];
+      let updatedBookedBy = [...bookedBy];
       
       if (!updatedBookedBy.includes(userId)) {
         updatedBookedBy.push(userId);
       }
+
+      console.log("Updating ride with new available seats:", newAvailableSeats, "and booked_by:", updatedBookedBy);
 
       const { error: updateError } = await supabase
         .from("rides")
