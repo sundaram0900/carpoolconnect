@@ -1,3 +1,4 @@
+
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -249,10 +250,18 @@ export const databaseService = {
         return false;
       }
       
+      // Calculate new available seats
       const newAvailableSeats = ride.available_seats - formData.seats;
+      
+      // Update ride status to 'booked' if no seats remaining
+      const updateData: any = { available_seats: newAvailableSeats };
+      if (newAvailableSeats === 0) {
+        updateData.status = 'booked';
+      }
+      
       const { error: updateError } = await supabase
         .from("rides")
-        .update({ available_seats: newAvailableSeats })
+        .update(updateData)
         .eq("id", rideId);
       
       if (updateError) {
@@ -338,10 +347,18 @@ export const databaseService = {
         return false;
       }
       
+      // Calculate new available seats
       const newAvailableSeats = booking.ride.available_seats + booking.seats;
+      
+      // Update ride data - restore status to 'scheduled' if it was 'booked'
+      const updateData: any = { available_seats: newAvailableSeats };
+      if (booking.ride.status === 'booked') {
+        updateData.status = 'scheduled';
+      }
+      
       const { error: updateError } = await supabase
         .from("rides")
-        .update({ available_seats: newAvailableSeats })
+        .update(updateData)
         .eq("id", booking.ride_id);
       
       if (updateError) {
