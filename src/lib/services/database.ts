@@ -1,4 +1,3 @@
-
 import { userService } from "./userService";
 import { bookingService } from "./bookingService";
 import { rideRequestService } from "./rideRequestService";
@@ -9,15 +8,14 @@ export const databaseService = {
   updateUserProfile: userService.updateUserProfile,
   uploadProfilePicture: userService.uploadProfilePicture,
   
-  // Booking related functions
+  // Proxy booking functions to bookingService
+  bookRide: bookingService.bookRide,
+  cancelBooking: bookingService.cancelBooking,
+  checkExistingBooking: bookingService.checkExistingBooking,
+  fetchRideBookings: bookingService.fetchRideBookings,
   fetchUserBookings: bookingService.fetchUserBookings,
   fetchUserReceipts: bookingService.fetchUserReceipts,
   downloadReceipt: bookingService.downloadReceipt,
-  checkExistingBooking: bookingService.checkExistingBooking,
-  isUserDriverOfRide: bookingService.isUserDriverOfRide,
-  bookRide: bookingService.bookRide,
-  fetchRideBookings: bookingService.fetchRideBookings,
-  cancelBooking: bookingService.cancelBooking,
   
   // Ride request related functions
   fetchUserRideRequests: rideRequestService.fetchUserRideRequests,

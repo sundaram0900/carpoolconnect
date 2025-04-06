@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { Ride } from "@/lib/types";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Tabs } from "@/components/ui/tabs";
 import RideDetailsModalTabs from "./RideDetailsModalTabs";
 import { databaseService } from "@/lib/services/database";
+import { useBookRide } from "@/hooks/useBookRide";
 
 interface RideDetailsModalProps {
   ride: Ride;
@@ -19,6 +20,7 @@ const RideDetailsModal = ({
 }: RideDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
   const [ride, setRide] = useState<Ride>(initialRide);
+  const { bookRide } = useBookRide(ride.id);
   
   useEffect(() => {
     setRide(initialRide);
@@ -56,10 +58,11 @@ const RideDetailsModal = ({
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="sr-only">Ride Details</DialogTitle>
           <Tabs defaultValue="details" className="w-full">
             <RideDetailsModalTabs 
               ride={ride} 
-              onBookClick={() => {}} 
+              onBookClick={bookRide} 
               onBookingSuccess={handleBookingSuccess}
               onRideUpdate={handleRideUpdate}
               defaultTab="details"

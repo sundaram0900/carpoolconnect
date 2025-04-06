@@ -165,7 +165,7 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Fix: Properly handle the booked_by array
+      // Fix: Properly handle the booked_by array by explicitly typing it
       let bookedBy: string[] = [];
       
       if (ride.booked_by) {
@@ -333,7 +333,7 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          // Fix: Properly handle the booked_by array
+          // Fix: Properly handle the booked_by array by explicitly typing it
           let bookedByArray: string[] = [];
           
           if (Array.isArray(currentRide.booked_by)) {
