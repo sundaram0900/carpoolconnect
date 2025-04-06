@@ -165,25 +165,22 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      const bookedBy: string[] = [];
+      // Fix: Properly handle the booked_by array
+      let bookedBy: string[] = [];
       
       if (ride.booked_by) {
         if (Array.isArray(ride.booked_by)) {
-          (ride.booked_by as any[]).forEach(id => {
-            if (typeof id === 'string') bookedBy.push(id);
-          });
+          bookedBy = [...ride.booked_by] as string[];
         } else if (typeof ride.booked_by === 'string') {
           try {
-            const parsed = JSON.parse(ride.booked_by);
+            const parsed = JSON.parse(ride.booked_by as string);
             if (Array.isArray(parsed)) {
-              parsed.forEach(id => {
-                if (typeof id === 'string') bookedBy.push(id);
-              });
+              bookedBy = [...parsed];
             } else {
-              bookedBy.push(ride.booked_by);
+              bookedBy = [ride.booked_by as string];
             }
           } catch {
-            bookedBy.push(ride.booked_by);
+            bookedBy = [ride.booked_by as string];
           }
         }
       }
@@ -336,24 +333,21 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          const bookedByArray: string[] = [];
+          // Fix: Properly handle the booked_by array
+          let bookedByArray: string[] = [];
           
           if (Array.isArray(currentRide.booked_by)) {
-            (currentRide.booked_by as any[]).forEach(id => {
-              if (typeof id === 'string') bookedByArray.push(id);
-            });
+            bookedByArray = [...currentRide.booked_by] as string[];
           } else if (typeof currentRide.booked_by === 'string') {
             try {
-              const parsed = JSON.parse(currentRide.booked_by);
+              const parsed = JSON.parse(currentRide.booked_by as string);
               if (Array.isArray(parsed)) {
-                parsed.forEach(id => {
-                  if (typeof id === 'string') bookedByArray.push(id);
-                });
+                bookedByArray = [...parsed];
               } else {
-                bookedByArray.push(currentRide.booked_by);
+                bookedByArray = [currentRide.booked_by as string];
               }
             } catch {
-              bookedByArray.push(currentRide.booked_by);
+              bookedByArray = [currentRide.booked_by as string];
             }
           }
           
