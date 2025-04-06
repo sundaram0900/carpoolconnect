@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import RideCard from "@/components/RideCard";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import { Ride } from "@/lib/types";
+import { useNavigate } from "react-router-dom";
 
 interface RideCardWrapperProps {
   ride: Ride;
@@ -11,10 +12,11 @@ interface RideCardWrapperProps {
 
 const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
   
   // Handle view button click
   const handleViewClick = () => {
-    setIsModalOpen(true);
+    navigate(`/ride/${ride.id}`);
   };
   
   return (
@@ -29,10 +31,12 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
           View & Book
         </Button>
       </div>
-      <RideDetailsModal 
-        ride={ride} 
-        isOpenByDefault={isModalOpen}
-      />
+      {isModalOpen && (
+        <RideDetailsModal 
+          ride={ride} 
+          isOpenByDefault={isModalOpen}
+        />
+      )}
     </div>
   );
 };
