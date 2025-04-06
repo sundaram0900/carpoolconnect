@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -261,17 +260,18 @@ export const databaseService = {
       // Handle various possible types of booked_by from database
       if (ride.booked_by) {
         if (Array.isArray(ride.booked_by)) {
-          bookedBy = [...ride.booked_by as string[]];
+          // Use type assertion to string[] since we know it should be a string array
+          bookedBy = [...(ride.booked_by as string[])];
         } else if (typeof ride.booked_by === 'string') {
           // In case it's a JSON string that needs parsing
           try {
-            const parsed = JSON.parse(ride.booked_by as unknown as string);
+            const parsed = JSON.parse(ride.booked_by as string);
             if (Array.isArray(parsed)) {
               bookedBy = parsed;
             }
           } catch {
             // If parsing fails, treat as single string
-            bookedBy = [ride.booked_by as unknown as string];
+            bookedBy = [ride.booked_by as string];
           }
         }
       }
@@ -436,15 +436,15 @@ export const databaseService = {
             
             if (currentRide.booked_by) {
               if (Array.isArray(currentRide.booked_by)) {
-                bookedByArray = [...currentRide.booked_by as string[]];
+                bookedByArray = [...(currentRide.booked_by as string[])];
               } else if (typeof currentRide.booked_by === 'string') {
                 try {
-                  const parsed = JSON.parse(currentRide.booked_by as unknown as string);
+                  const parsed = JSON.parse(currentRide.booked_by as string);
                   if (Array.isArray(parsed)) {
                     bookedByArray = parsed;
                   }
                 } catch {
-                  bookedByArray = [currentRide.booked_by as unknown as string];
+                  bookedByArray = [currentRide.booked_by as string];
                 }
               }
             }
