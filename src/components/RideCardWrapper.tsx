@@ -12,6 +12,11 @@ interface RideCardWrapperProps {
 const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Handle view button click
+  const handleViewClick = () => {
+    setIsModalOpen(true);
+  };
+  
   return (
     <div>
       <RideCard ride={ride} />
@@ -19,7 +24,7 @@ const RideCardWrapper = ({ ride }: RideCardWrapperProps) => {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleViewClick}
         >
           View & Book
         </Button>
