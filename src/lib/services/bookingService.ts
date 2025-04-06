@@ -1,4 +1,3 @@
-
 import { supabase, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -165,10 +164,13 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Fix the TypeScript error by explicitly casting and handling the booked_by array
-      const bookedBy: string[] = Array.isArray(ride.booked_by) 
-        ? [...ride.booked_by as string[]] 
-        : [];
+      let bookedBy: string[] = [];
+      
+      if (ride.booked_by) {
+        if (Array.isArray(ride.booked_by)) {
+          bookedBy = [...ride.booked_by];
+        }
+      }
       
       if (!bookedBy.includes(userId)) {
         bookedBy.push(userId);
@@ -318,10 +320,11 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          // Fix the TypeScript error by explicitly casting and handling the booked_by array
-          const bookedByArray: string[] = Array.isArray(currentRide.booked_by) 
-            ? [...currentRide.booked_by as string[]] 
-            : [];
+          let bookedByArray: string[] = [];
+          
+          if (Array.isArray(currentRide.booked_by)) {
+            bookedByArray = [...currentRide.booked_by];
+          }
           
           const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
