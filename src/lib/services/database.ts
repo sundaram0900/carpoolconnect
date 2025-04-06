@@ -254,21 +254,25 @@ export const databaseService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      let bookedBy: string[] = [];
+      const bookedBy: string[] = [];
       
       if (ride.booked_by) {
         if (Array.isArray(ride.booked_by)) {
-          bookedBy = Array.from(ride.booked_by as unknown as string[]);
+          (ride.booked_by as any[]).forEach(id => {
+            if (typeof id === 'string') bookedBy.push(id);
+          });
         } else if (typeof ride.booked_by === 'string') {
           try {
             const parsed = JSON.parse(ride.booked_by);
             if (Array.isArray(parsed)) {
-              bookedBy = parsed;
+              parsed.forEach(id => {
+                if (typeof id === 'string') bookedBy.push(id);
+              });
             } else {
-              bookedBy = [ride.booked_by];
+              bookedBy.push(ride.booked_by);
             }
           } catch {
-            bookedBy = [ride.booked_by];
+            bookedBy.push(ride.booked_by);
           }
         }
       }
@@ -413,54 +417,50 @@ export const databaseService = {
         return false;
       }
       
-      const { data: remainingBookings } = await supabase
-        .from("bookings")
-        .select("id")
-        .eq("ride_id", booking.ride_id)
-        .eq("user_id", booking.user_id);
-      
-      if (!remainingBookings || remainingBookings.length === 0) {
-        try {
-          const { data: currentRide } = await supabase
-            .from("rides")
-            .select("booked_by")
-            .eq("id", booking.ride_id)
-            .single();
-            
-          if (currentRide && currentRide.booked_by) {
-            let bookedByArray: string[] = [];
-            
-            if (Array.isArray(currentRide.booked_by)) {
-              bookedByArray = Array.from(currentRide.booked_by as unknown as string[]);
-            } else if (typeof currentRide.booked_by === 'string') {
-              try {
-                const parsed = JSON.parse(currentRide.booked_by);
-                if (Array.isArray(parsed)) {
-                  bookedByArray = parsed;
-                } else {
-                  bookedByArray = [currentRide.booked_by];
-                }
-              } catch {
-                bookedByArray = [currentRide.booked_by];
+      try {
+        const { data: currentRide } = await supabase
+          .from("rides")
+          .select("booked_by")
+          .eq("id", booking.ride_id)
+          .single();
+          
+        if (currentRide && currentRide.booked_by) {
+          const bookedByArray: string[] = [];
+          
+          if (Array.isArray(currentRide.booked_by)) {
+            (currentRide.booked_by as any[]).forEach(id => {
+              if (typeof id === 'string') bookedByArray.push(id);
+            });
+          } else if (typeof currentRide.booked_by === 'string') {
+            try {
+              const parsed = JSON.parse(currentRide.booked_by);
+              if (Array.isArray(parsed)) {
+                parsed.forEach(id => {
+                  if (typeof id === 'string') bookedByArray.push(id);
+                });
+              } else {
+                bookedByArray.push(currentRide.booked_by);
               }
-            }
-            
-            const updatedBookedBy = bookedByArray.filter(
-              (id) => id !== booking.user_id
-            );
-            
-            const { error: updateArrayError } = await supabase
-              .from("rides")
-              .update({ booked_by: updatedBookedBy })
-              .eq("id", booking.ride_id);
-              
-            if (updateArrayError) {
-              console.error("Error updating booked_by array:", updateArrayError);
+            } catch {
+              bookedByArray.push(currentRide.booked_by);
             }
           }
-        } catch (error) {
-          console.error("Error updating booked_by array:", error);
+          
+          const updatedBookedBy = bookedByArray.filter(
+            (id) => id !== booking.user_id
+          );
+          
+          const { error: updateArrayError } = await supabase
+            .from("rides")
+            .update({ booked_by: updatedBookedBy })
+            .eq("id", booking.ride_id);
+            
+          if (updateArrayError) {
+            console.error("Error updating booked_by array:", updateArrayError);
+          }
         }
+      } catch (error) {
+        console.error("Error updating booked_by array:", error);
       }
       
       toast.success("Booking cancelled successfully");
