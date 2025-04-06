@@ -206,33 +206,33 @@ export const databaseService = {
     }
   },
   
-  async bookRide(rideId: string, userId: string, formData: BookingFormData): Promise<boolean> {
+  async bookRide(rideId: string, userId: string, formData: BookingFormData): Promise<{ success: boolean, bookingId?: string }> {
     try {
       const isDriver = await this.isUserDriverOfRide(rideId, userId);
       if (isDriver) {
         console.error("Driver cannot book their own ride");
         toast.error("You cannot book your own ride");
-        return false;
+        return { success: false };
       }
       
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("available_seats, status")
+        .select("available_seats, status, driver_id")
         .eq("id", rideId)
         .single();
       
       if (rideError || !ride) {
         console.error("Error fetching ride:", rideError);
         toast.error("Failed to book ride: Ride not found");
-        return false;
+        return { success: false };
       }
       
       if (ride.available_seats < formData.seats) {
         toast.error(`Only ${ride.available_seats} seats available`);
-        return false;
+        return { success: false };
       }
       
-      const { error: bookingError } = await supabase
+      const { data: bookingData, error: bookingError } = await supabase
         .from("bookings")
         .insert({
           ride_id: rideId,
@@ -241,12 +241,14 @@ export const databaseService = {
           notes: formData.notes,
           contact_phone: formData.contactPhone,
           payment_method: formData.paymentMethod
-        });
+        })
+        .select()
+        .single();
       
       if (bookingError) {
         console.error("Error creating booking:", bookingError);
         toast.error("Failed to book ride");
-        return false;
+        return { success: false };
       }
       
       const newAvailableSeats = ride.available_seats - formData.seats;
@@ -265,25 +267,59 @@ export const databaseService = {
       if (updateError) {
         console.error("Error updating ride seats:", updateError);
         toast.error("Booking created but seat count update failed");
-        return false;
+        return { success: false, bookingId: bookingData.id };
       }
       
-      const { error: bookedByError } = await supabase
-        .rpc('add_user_to_booked_by', {
-          ride_id: rideId,
-          user_id: userId
-        });
+      try {
+        const { error: bookedByError } = await supabase.rpc(
+          'add_user_to_booked_by',
+          { 
+            ride_id: rideId,
+            user_id: userId
+          }
+        );
+        
+        if (bookedByError) {
+          console.error("Error updating booked_by array:", bookedByError);
+        }
+      } catch (error) {
+        console.error("Error with array operation:", error);
+      }
       
-      if (bookedByError) {
-        console.error("Error updating booked_by array:", bookedByError);
+      try {
+        const { data: rideDetails } = await supabase
+          .from("rides")
+          .select(`
+            *,
+            driver:driver_id(*)
+          `)
+          .eq("id", rideId)
+          .single();
+          
+        const { data: userData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+          
+        await supabase.functions.invoke('send-booking-notification', {
+          body: { 
+            booking: bookingData,
+            ride: rideDetails,
+            user: userData,
+            seats: formData.seats
+          }
+        });
+      } catch (emailError) {
+        console.error("Error sending email notifications:", emailError);
       }
       
       toast.success("Ride booked successfully!");
-      return true;
+      return { success: true, bookingId: bookingData.id };
     } catch (error) {
       console.error("Error in bookRide:", error);
       toast.error("An unexpected error occurred");
-      return false;
+      return { success: false };
     }
   },
   
@@ -373,14 +409,20 @@ export const databaseService = {
         .eq("user_id", booking.user_id);
       
       if (!remainingBookings || remainingBookings.length === 0) {
-        const { error: bookedByError } = await supabase
-          .rpc('array_remove', { 
-            arr: booking.ride.booked_by, 
-            item: booking.user_id 
-          });
-        
-        if (bookedByError) {
-          console.error("Error updating booked_by array:", bookedByError);
+        try {
+          const { error: bookedByError } = await supabase.rpc(
+            'array_remove',
+            { 
+              arr: booking.ride.booked_by,
+              item: booking.user_id
+            }
+          );
+          
+          if (bookedByError) {
+            console.error("Error updating booked_by array:", bookedByError);
+          }
+        } catch (error) {
+          console.error("Error with array operation:", error);
         }
       }
       

@@ -22,43 +22,15 @@ export const useBookRide = (rideId: string) => {
     try {
       setIsBooking(true);
       
-      // Check if user is the driver
-      const isDriver = await databaseService.isUserDriverOfRide(rideId, user.id);
-      if (isDriver) {
-        toast.error("You cannot book your own ride");
-        return { success: false };
-      }
+      // Call the bookRide method which now returns the bookingId as well
+      const result = await databaseService.bookRide(rideId, user.id, formData);
       
-      // Check for existing booking
-      const hasExistingBooking = await databaseService.checkExistingBooking(rideId, user.id);
-      if (hasExistingBooking) {
-        toast.error("You have already booked this ride");
-        return { success: false };
-      }
-
-      // Book the ride
-      const success = await databaseService.bookRide(rideId, user.id, formData);
-      
-      if (success) {
-        // Fetch the booking ID for the newly created booking
-        const { data: newBooking } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('ride_id', rideId)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (newBooking) {
-          setBookingId(newBooking.id);
-        }
-        
+      if (result.success && result.bookingId) {
+        setBookingId(result.bookingId);
         setBookingSuccess(true);
-        return { success: true, bookingId: newBooking?.id };
       }
       
-      return { success: false };
+      return result;
     } catch (error) {
       console.error("Error in bookRide:", error);
       return { success: false };

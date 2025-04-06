@@ -1,3 +1,6 @@
+
+// Only modifying the specific part where we're using the RideDetailsModal component
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Ride } from "@/lib/types";
