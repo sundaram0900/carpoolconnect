@@ -217,7 +217,7 @@ export const databaseService = {
       
       const { data: ride, error: rideError } = await supabase
         .from("rides")
-        .select("available_seats, status, driver_id")
+        .select("available_seats, status, driver_id, booked_by")
         .eq("id", rideId)
         .single();
       
@@ -254,7 +254,16 @@ export const databaseService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      const updateData: any = { available_seats: newAvailableSeats };
+      const bookedBy = Array.isArray(ride.booked_by) ? [...ride.booked_by] : [];
+      if (!bookedBy.includes(userId)) {
+        bookedBy.push(userId);
+      }
+      
+      const updateData: any = { 
+        available_seats: newAvailableSeats,
+        booked_by: bookedBy
+      };
+      
       if (newAvailableSeats === 0) {
         updateData.status = 'booked';
       }
@@ -268,22 +277,6 @@ export const databaseService = {
         console.error("Error updating ride seats:", updateError);
         toast.error("Booking created but seat count update failed");
         return { success: false, bookingId: bookingData.id };
-      }
-      
-      try {
-        const { error: bookedByError } = await supabase.rpc(
-          'add_user_to_booked_by',
-          { 
-            ride_id: rideId,
-            user_id: userId
-          }
-        );
-        
-        if (bookedByError) {
-          console.error("Error updating booked_by array:", bookedByError);
-        }
-      } catch (error) {
-        console.error("Error with array operation:", error);
       }
       
       try {
@@ -417,8 +410,9 @@ export const databaseService = {
             .single();
             
           if (currentRide && currentRide.booked_by) {
-            const updatedBookedBy = currentRide.booked_by.filter(
-              (id: string) => id !== booking.user_id
+            const bookedByArray = Array.isArray(currentRide.booked_by) ? currentRide.booked_by : [];
+            const updatedBookedBy = bookedByArray.filter(
+              (id) => id !== booking.user_id
             );
             
             const { error: updateArrayError } = await supabase
