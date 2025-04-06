@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Ride } from "@/lib/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -53,19 +54,16 @@ const RideDetailsModal = ({
   
   return (
     <>
-      
-      
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <Tabs defaultValue="details" className="w-full">
             <RideDetailsModalTabs 
               ride={ride} 
-              onClose={() => setIsOpen(false)} 
+              onBookClick={() => {}} 
               onBookingSuccess={handleBookingSuccess}
               onRideUpdate={handleRideUpdate}
+              defaultTab="details"
             />
-            
-            
           </Tabs>
         </DialogContent>
       </Dialog>

@@ -37,6 +37,7 @@ interface RideDetailsModalTabsProps {
   ride: Ride;
   defaultTab?: string;
   onBookClick: () => void;
+  onBookingSuccess?: () => Promise<void>;
   onRideUpdate?: (updatedRide: Ride) => void;
 }
 
@@ -44,6 +45,7 @@ const RideDetailsModalTabs = ({
   ride, 
   defaultTab = "details",
   onBookClick,
+  onBookingSuccess,
   onRideUpdate
 }: RideDetailsModalTabsProps) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -134,6 +136,9 @@ const RideDetailsModalTabs = ({
 
   const handleBookingChange = () => {
     refreshRideData();
+    if (onBookingSuccess) {
+      onBookingSuccess();
+    }
   };
 
   return (

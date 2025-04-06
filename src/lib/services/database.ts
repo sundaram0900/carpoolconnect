@@ -410,19 +410,28 @@ export const databaseService = {
       
       if (!remainingBookings || remainingBookings.length === 0) {
         try {
-          const { error: bookedByError } = await supabase.rpc(
-            'array_remove',
-            { 
-              arr: booking.ride.booked_by,
-              item: booking.user_id
+          const { data: currentRide } = await supabase
+            .from("rides")
+            .select("booked_by")
+            .eq("id", booking.ride_id)
+            .single();
+            
+          if (currentRide && currentRide.booked_by) {
+            const updatedBookedBy = currentRide.booked_by.filter(
+              (id: string) => id !== booking.user_id
+            );
+            
+            const { error: updateArrayError } = await supabase
+              .from("rides")
+              .update({ booked_by: updatedBookedBy })
+              .eq("id", booking.ride_id);
+              
+            if (updateArrayError) {
+              console.error("Error updating booked_by array:", updateArrayError);
             }
-          );
-          
-          if (bookedByError) {
-            console.error("Error updating booked_by array:", bookedByError);
           }
         } catch (error) {
-          console.error("Error with array operation:", error);
+          console.error("Error updating booked_by array:", error);
         }
       }
       

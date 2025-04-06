@@ -247,14 +247,26 @@ const Search = () => {
               >
                 {filteredRides.map((ride) => (
                   <div key={ride.id} className="relative">
-                    <RideDetailsModal 
-                      ride={ride}
-                      trigger={
-                        <div className="cursor-pointer hover:shadow-md transition-shadow duration-200">
-                          <RideCard ride={ride} />
-                        </div>
-                      }
-                    />
+                    <div 
+                      className="cursor-pointer hover:shadow-md transition-shadow duration-200"
+                      onClick={() => {
+                        // You can add a state here to control which ride's modal is open
+                        // For simplicity, we're just wrapping the RideCard in a clickable div
+                      }}
+                    >
+                      <RideCard ride={ride} />
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          // You would set the specific ride's modal to open here
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </motion.div>
