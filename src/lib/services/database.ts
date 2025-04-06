@@ -1,4 +1,3 @@
-
 import { supabase, mapDbProfileToUser, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData, Ride, RideRequest, User } from "@/lib/types";
 import { toast } from "sonner";
@@ -255,17 +254,15 @@ export const databaseService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Define and type the booked_by array explicitly
-      // Use type assertion to tell TypeScript that ride.booked_by is a string[] or null
-      const bookedBy: string[] = Array.isArray(ride.booked_by) 
-        ? [...(ride.booked_by as string[])] 
+      const bookedBy: string[] = ride.booked_by 
+        ? (Array.isArray(ride.booked_by) ? [...(ride.booked_by as string[])] : [])
         : [];
-        
+      
       if (!bookedBy.includes(userId)) {
         bookedBy.push(userId);
       }
       
-      const updateData: any = { 
+      const updateData: Record<string, any> = { 
         available_seats: newAvailableSeats,
         booked_by: bookedBy
       };
@@ -385,7 +382,7 @@ export const databaseService = {
       const newAvailableSeats = booking.ride.available_seats + booking.seats;
       console.log(`Updating available seats from ${booking.ride.available_seats} to ${newAvailableSeats}`);
       
-      const updateData: any = { available_seats: newAvailableSeats };
+      const updateData: Record<string, any> = { available_seats: newAvailableSeats };
       if (booking.ride.status === 'booked') {
         updateData.status = 'scheduled';
       }
@@ -416,11 +413,10 @@ export const databaseService = {
             .single();
             
           if (currentRide && currentRide.booked_by) {
-            // Use type assertion to tell TypeScript that currentRide.booked_by is a string[] or empty array
-            const bookedByArray: string[] = Array.isArray(currentRide.booked_by) 
-              ? (currentRide.booked_by as string[]) 
+            const bookedByArray: string[] = currentRide.booked_by 
+              ? (Array.isArray(currentRide.booked_by) ? (currentRide.booked_by as string[]) : [])
               : [];
-              
+            
             const updatedBookedBy = bookedByArray.filter(
               (id) => id !== booking.user_id
             );
