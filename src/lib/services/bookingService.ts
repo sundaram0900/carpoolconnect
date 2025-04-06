@@ -1,4 +1,3 @@
-
 import { supabase, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -165,25 +164,9 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Fix: Properly handle the booked_by array by explicitly typing it
-      let bookedBy: string[] = [];
-      
-      if (ride.booked_by) {
-        if (Array.isArray(ride.booked_by)) {
-          bookedBy = [...ride.booked_by] as string[];
-        } else if (typeof ride.booked_by === 'string') {
-          try {
-            const parsed = JSON.parse(ride.booked_by as string);
-            if (Array.isArray(parsed)) {
-              bookedBy = [...parsed];
-            } else {
-              bookedBy = [ride.booked_by as string];
-            }
-          } catch {
-            bookedBy = [ride.booked_by as string];
-          }
-        }
-      }
+      const bookedBy: string[] = Array.isArray(ride.booked_by) 
+        ? [...(ride.booked_by as string[])] 
+        : [];
       
       if (!bookedBy.includes(userId)) {
         bookedBy.push(userId);
@@ -333,27 +316,11 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          // Fix: Properly handle the booked_by array by explicitly typing it
-          let bookedByArray: string[] = [];
+          const bookedByArray: string[] = Array.isArray(currentRide.booked_by) 
+            ? [...(currentRide.booked_by as string[])] 
+            : [];
           
-          if (Array.isArray(currentRide.booked_by)) {
-            bookedByArray = [...currentRide.booked_by] as string[];
-          } else if (typeof currentRide.booked_by === 'string') {
-            try {
-              const parsed = JSON.parse(currentRide.booked_by as string);
-              if (Array.isArray(parsed)) {
-                bookedByArray = [...parsed];
-              } else {
-                bookedByArray = [currentRide.booked_by as string];
-              }
-            } catch {
-              bookedByArray = [currentRide.booked_by as string];
-            }
-          }
-          
-          const updatedBookedBy = bookedByArray.filter(
-            (id) => id !== booking.user_id
-          );
+          const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
           const { error: updateArrayError } = await supabase
             .from("rides")

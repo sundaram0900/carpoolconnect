@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { bookingService } from "@/lib/services/bookingService"; 
+import { databaseService } from "@/lib/services/database"; 
 import { useAuth } from "@/lib/context/AuthContext";
 import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -21,8 +21,8 @@ export const useBookRide = (rideId: string) => {
     try {
       setIsBooking(true);
       
-      // Call the bookRide method from the bookingService
-      const result = await bookingService.bookRide(rideId, user.id, formData);
+      // Call the bookRide method from the databaseService (proxied to bookingService)
+      const result = await databaseService.bookRide(rideId, user.id, formData);
       
       if (result.success && result.bookingId) {
         setBookingId(result.bookingId);
@@ -46,7 +46,7 @@ export const useBookRide = (rideId: string) => {
 
     try {
       setIsCancelling(true);
-      const success = await bookingService.cancelBooking(bookingId, user.id);
+      const success = await databaseService.cancelBooking(bookingId, user.id);
       return success;
     } catch (error) {
       console.error("Error in cancelBooking:", error);
