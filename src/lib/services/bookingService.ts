@@ -170,17 +170,13 @@ export const bookingService = {
       // Handle different possible types of booked_by
       if (ride.booked_by) {
         if (Array.isArray(ride.booked_by)) {
-          bookedByArray = [...ride.booked_by];
+          bookedByArray = [...ride.booked_by] as string[];
         } else if (typeof ride.booked_by === 'string') {
-          try {
-            bookedByArray = [ride.booked_by];
-          } catch {
-            bookedByArray = [];
-          }
+          bookedByArray = [ride.booked_by];
         }
       }
       
-      // Ensure we're adding a string to the string array
+      // Add the user ID to the booked_by array if not already present
       if (!bookedByArray.includes(userId)) {
         bookedByArray.push(userId);
       }
@@ -338,17 +334,13 @@ export const bookingService = {
           // Handle different possible types of booked_by
           if (currentRide.booked_by) {
             if (Array.isArray(currentRide.booked_by)) {
-              bookedByArray = [...currentRide.booked_by];
+              bookedByArray = [...currentRide.booked_by] as string[];
             } else if (typeof currentRide.booked_by === 'string') {
-              try {
-                bookedByArray = [currentRide.booked_by];
-              } catch {
-                bookedByArray = [];
-              }
+              bookedByArray = [currentRide.booked_by];
             }
           }
           
-          // Safely filter out the user ID from the array
+          // Filter out the user ID from the booked_by array
           const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
           const { error: updateArrayError } = await supabase
