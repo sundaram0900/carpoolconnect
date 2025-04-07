@@ -1,4 +1,3 @@
-
 import { supabase, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -165,13 +164,10 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Type the booked_by array explicitly as string[] | null
       const bookedBy: string[] = [];
       
-      // Handle the booked_by array safely
       if (ride.booked_by && Array.isArray(ride.booked_by)) {
-        // Use type assertion to tell TypeScript that ride.booked_by is string[]
-        bookedBy.push(...(ride.booked_by as string[]));
+        (ride.booked_by as string[]).forEach(id => bookedBy.push(id));
       }
       
       if (!bookedBy.includes(userId)) {
@@ -322,15 +318,11 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          // Type the bookedByArray explicitly as string[]
-          const bookedByArray: string[] = [];
+          let updatedBookedBy: string[] = [];
           
-          // Handle the currentRide.booked_by array safely with type assertion
           if (Array.isArray(currentRide.booked_by)) {
-            bookedByArray.push(...(currentRide.booked_by as string[]));
+            updatedBookedBy = (currentRide.booked_by as string[]).filter(id => id !== booking.user_id);
           }
-          
-          const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
           const { error: updateArrayError } = await supabase
             .from("rides")
