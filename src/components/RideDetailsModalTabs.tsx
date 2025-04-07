@@ -33,7 +33,6 @@ import { formatDate, formatTime, formatPrice, getAvatarUrl } from "@/lib/utils";
 import DriverDetails from "./DriverDetails";
 import RideBookingsList from "./RideBookingsList";
 import BookRideModal from "./BookRideModal";
-import { useBookRide } from "@/hooks/useBookRide";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,25 +69,20 @@ const RideDetailsModalTabs = ({
   const { user } = useAuth();
   
   const isDriver = user?.id === ride.driver.id;
-  const isPassenger = ride.bookedBy?.includes(user?.id || "");
+  const isPassenger = user && ride.bookedBy ? ride.bookedBy.includes(user.id) : false;
   const canStartRide = isDriver && ride.status === 'scheduled';
   const canCompleteRide = isDriver && ride.status === 'in-progress';
   const canCancelRide = isDriver && (ride.status === 'scheduled' || ride.status === 'in-progress');
   const canBookRide = !isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0;
   const canCancelBooking = isPassenger && ride.status === 'scheduled';
   
-  // Calculate distance and duration
   const distance = 20; // example value in km
   const duration = 45; // example value in minutes
 
-  // Determine who the chat will be with
   let chatWithUser: User;
   if (isDriver) {
-    // If current user is driver, they chat with the first passenger
-    // In a real app, you'd have a UI to select which passenger to chat with
     chatWithUser = { id: ride.bookedBy?.[0] || "", name: "Passenger" } as User;
   } else {
-    // If current user is passenger, they chat with the driver
     chatWithUser = ride.driver;
   }
 
@@ -137,7 +131,6 @@ const RideDetailsModalTabs = ({
     
     setIsCancelling(true);
     try {
-      // Find the booking ID for this user and ride
       const { data: bookings, error } = await supabase
         .from('bookings')
         .select('id')
@@ -177,8 +170,6 @@ const RideDetailsModalTabs = ({
   };
 
   const generateReceipt = async () => {
-    // In a real app, you'd get the actual booking ID
-    // For simplicity, we're using a dummy bookingId
     const { data: bookings } = await supabase
       .from('bookings')
       .select('id')
@@ -437,7 +428,6 @@ const RideDetailsModalTabs = ({
               userId={user?.id || ""} 
               rideId={ride.id}
               onSuccess={() => {
-                // If driver is verifying and ride is scheduled, auto-start the ride
                 if (isDriver && ride.status === 'scheduled') {
                   handleStartRide();
                 }

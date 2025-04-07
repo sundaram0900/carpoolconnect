@@ -1,4 +1,3 @@
-
 import { supabase, mapDbRideToRide } from "@/integrations/supabase/client";
 import { BookingFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -173,16 +172,15 @@ export const bookingService = {
         if (Array.isArray(ride.booked_by)) {
           bookedByArray = [...ride.booked_by];
         } else if (typeof ride.booked_by === 'string') {
-          // If somehow it's a string, try to parse it or use as a single element
           try {
-            const parsed = JSON.parse(ride.booked_by);
-            bookedByArray = Array.isArray(parsed) ? parsed : [ride.booked_by];
-          } catch {
             bookedByArray = [ride.booked_by];
+          } catch {
+            bookedByArray = [];
           }
         }
       }
       
+      // Ensure we're adding a string to the string array
       if (!bookedByArray.includes(userId)) {
         bookedByArray.push(userId);
       }
@@ -342,16 +340,15 @@ export const bookingService = {
             if (Array.isArray(currentRide.booked_by)) {
               bookedByArray = [...currentRide.booked_by];
             } else if (typeof currentRide.booked_by === 'string') {
-              // If somehow it's a string, try to parse it or use as a single element
               try {
-                const parsed = JSON.parse(currentRide.booked_by);
-                bookedByArray = Array.isArray(parsed) ? parsed : [currentRide.booked_by];
-              } catch {
                 bookedByArray = [currentRide.booked_by];
+              } catch {
+                bookedByArray = [];
               }
             }
           }
           
+          // Safely filter out the user ID from the array
           const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
           const { error: updateArrayError } = await supabase
