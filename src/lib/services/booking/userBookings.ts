@@ -50,7 +50,7 @@ export const userBookingsService = {
   async downloadReceipt(receiptId: string): Promise<Blob | null> {
     try {
       const { data, error } = await supabase.functions.invoke('download-receipt', {
-        body: { receiptId }
+        body: { receiptId } as Record<string, unknown>
       });
       
       if (error || !data) {
