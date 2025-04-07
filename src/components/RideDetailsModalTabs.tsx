@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ride, User, BookingFormData } from "@/lib/types";
@@ -24,7 +25,8 @@ import {
   DollarSign as IndianRupee,
   Users,
   Car,
-  RefreshCcw
+  RefreshCcw,
+  AlertTriangle
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +35,16 @@ import DriverDetails from "./DriverDetails";
 import RideBookingsList from "./RideBookingsList";
 import BookRideModal from "./BookRideModal";
 import { useBookRide } from "@/hooks/useBookRide";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RideDetailsModalTabsProps {
   ride: Ride;
@@ -52,8 +64,10 @@ const RideDetailsModalTabs = ({
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [refreshing, setRefreshing] = useState(false);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const { user } = useAuth();
-  const { bookRide } = useBookRide(ride.id);
+  const { bookRide, cancelBooking } = useBookRide(ride.id);
   
   const isDriver = user?.id === ride.driver.id;
   const isPassenger = ride.bookedBy?.includes(user?.id || "");
@@ -61,6 +75,7 @@ const RideDetailsModalTabs = ({
   const canCompleteRide = isDriver && ride.status === 'in-progress';
   const canCancelRide = isDriver && (ride.status === 'scheduled' || ride.status === 'in-progress');
   const canBookRide = !isDriver && !isPassenger && ride.status === 'scheduled' && ride.availableSeats > 0;
+  const canCancelBooking = isPassenger && ride.status === 'scheduled';
   
   // Calculate distance and duration
   const distance = 20; // example value in km
@@ -114,6 +129,42 @@ const RideDetailsModalTabs = ({
     if (success) {
       toast.success("Ride cancelled successfully");
       refreshRideData();
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!user) return;
+    
+    setIsCancelling(true);
+    try {
+      // Find the booking ID for this user and ride
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('ride_id', ride.id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (bookings) {
+        const success = await cancelBooking(bookings.id);
+        if (success) {
+          toast.success("Your booking has been cancelled");
+          refreshRideData();
+          setIsCancelDialogOpen(false);
+          if (onBookingSuccess) {
+            await onBookingSuccess();
+          }
+        } else {
+          toast.error("Failed to cancel booking");
+        }
+      } else {
+        toast.error("Booking not found");
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error("Error cancelling booking");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -297,6 +348,17 @@ const RideDetailsModalTabs = ({
                 </Button>
               )}
               
+              {isPassenger && canCancelBooking && (
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={() => setIsCancelDialogOpen(true)}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel My Booking
+                </Button>
+              )}
+              
               {isDriver && (
                 <div className="space-y-3">
                   {canStartRide && (
@@ -341,6 +403,17 @@ const RideDetailsModalTabs = ({
                 Book This Ride
               </Button>
             )}
+            
+            {isPassenger && canCancelBooking && (
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={() => setIsCancelDialogOpen(true)}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel My Booking
+              </Button>
+            )}
           </div>
         </TabsContent>
         
@@ -378,6 +451,37 @@ const RideDetailsModalTabs = ({
         onClose={() => setIsBookModalOpen(false)}
         onBook={bookRide}
       />
+
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Your Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel your booking for this ride? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, Keep My Booking</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelBooking} 
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? (
+                <>
+                  <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Yes, Cancel My Booking
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
