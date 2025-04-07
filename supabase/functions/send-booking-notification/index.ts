@@ -20,6 +20,7 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
     
     if (!RESEND_API_KEY) {
+      console.error("Missing Resend API key")
       return new Response(
         JSON.stringify({ error: "Missing Resend API key" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -36,11 +37,14 @@ serve(async (req) => {
     const { booking, ride, user, seats } = await req.json()
     
     if (!booking || !ride || !user) {
+      console.error("Missing required data", { booking, ride, user })
       return new Response(
         JSON.stringify({ error: "Missing required data" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       )
     }
+    
+    console.log("Processing booking notification", { bookingId: booking.id, rideId: ride.id, userId: user.id })
     
     // Format price and dates
     const pricePerSeat = ride.price
@@ -57,6 +61,7 @@ serve(async (req) => {
     // Customer email notification
     try {
       if (user.email) {
+        console.log("Sending email to customer:", user.email)
         await resend.emails.send({
           from: 'RideShare <onboarding@resend.dev>',
           to: [user.email],
@@ -114,6 +119,9 @@ serve(async (req) => {
             </div>
           `,
         });
+        console.log("Customer email sent successfully")
+      } else {
+        console.warn("Customer email not found")
       }
     } catch (emailError) {
       console.error("Error sending customer email:", emailError);
@@ -122,6 +130,7 @@ serve(async (req) => {
     // Driver email notification
     try {
       if (ride.driver && ride.driver.email) {
+        console.log("Sending email to driver:", ride.driver.email)
         await resend.emails.send({
           from: 'RideShare <onboarding@resend.dev>',
           to: [ride.driver.email],
@@ -151,7 +160,7 @@ serve(async (req) => {
               
               <div style="border-top: 1px solid #eee; padding-top: 15px;">
                 <p><strong>Total amount:</strong> ₹${totalPrice.toFixed(2)}</p>
-                <p><strong>Available seats remaining:</strong> ${ride.available_seats - seats}</p>
+                <p><strong>Available seats remaining:</strong> ${ride.available_seats}</p>
               </div>
               
               <div style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
@@ -161,6 +170,9 @@ serve(async (req) => {
             </div>
           `,
         });
+        console.log("Driver email sent successfully")
+      } else {
+        console.warn("Driver email not found")
       }
     } catch (emailError) {
       console.error("Error sending driver email:", emailError);
