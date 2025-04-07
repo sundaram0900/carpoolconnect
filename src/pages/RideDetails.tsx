@@ -1,15 +1,11 @@
-
-// Only modifying the specific part where we're using the RideDetailsModal component
-
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Ride } from "@/lib/types";
 import { databaseService } from "@/lib/services/database";
 import { Loader2 } from "lucide-react";
 import RideDetailsModal from "@/components/RideDetailsModal";
 import BookingSuccessCard from "@/components/BookingSuccessCard";
 import { motion } from "framer-motion";
-import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 

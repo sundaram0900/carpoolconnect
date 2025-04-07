@@ -50,10 +50,6 @@ const RideDetailsModal = ({
     }
   };
 
-  const closeModal = () => {
-    setIsOpen(false);
-  };
-  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
