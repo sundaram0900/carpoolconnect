@@ -166,11 +166,7 @@ export const bookingService = {
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
       // Fix TypeScript error by properly handling the booked_by array
-      let bookedByArray: string[] = [];
-      
-      if (ride.booked_by && Array.isArray(ride.booked_by)) {
-        bookedByArray = [...ride.booked_by as string[]];
-      }
+      const bookedByArray: string[] = Array.isArray(ride.booked_by) ? [...ride.booked_by] : [];
       
       if (!bookedByArray.includes(userId)) {
         bookedByArray.push(userId);
@@ -324,11 +320,7 @@ export const bookingService = {
           
         if (currentRide && currentRide.booked_by) {
           // Fix TypeScript error by properly handling the booked_by array
-          let bookedByArray: string[] = [];
-          
-          if (Array.isArray(currentRide.booked_by)) {
-            bookedByArray = [...currentRide.booked_by as string[]];
-          }
+          const bookedByArray: string[] = Array.isArray(currentRide.booked_by) ? [...currentRide.booked_by] : [];
           
           const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           
