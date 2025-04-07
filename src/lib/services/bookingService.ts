@@ -165,9 +165,23 @@ export const bookingService = {
       const newAvailableSeats = ride.available_seats - formData.seats;
       console.log(`Updating available seats from ${ride.available_seats} to ${newAvailableSeats}`);
       
-      // Fix TypeScript error by properly handling the booked_by array
-      // Define the array type explicitly
-      const bookedByArray: string[] = Array.isArray(ride.booked_by) ? [...ride.booked_by] : [];
+      // Fix TypeScript error by properly typing booked_by
+      let bookedByArray: string[] = [];
+      
+      // Handle different possible types of booked_by
+      if (ride.booked_by) {
+        if (Array.isArray(ride.booked_by)) {
+          bookedByArray = [...ride.booked_by];
+        } else if (typeof ride.booked_by === 'string') {
+          // If somehow it's a string, try to parse it or use as a single element
+          try {
+            const parsed = JSON.parse(ride.booked_by);
+            bookedByArray = Array.isArray(parsed) ? parsed : [ride.booked_by];
+          } catch {
+            bookedByArray = [ride.booked_by];
+          }
+        }
+      }
       
       if (!bookedByArray.includes(userId)) {
         bookedByArray.push(userId);
@@ -320,9 +334,23 @@ export const bookingService = {
           .single();
           
         if (currentRide && currentRide.booked_by) {
-          // Fix TypeScript error by properly handling the booked_by array
-          // Define the array type explicitly
-          const bookedByArray: string[] = Array.isArray(currentRide.booked_by) ? [...currentRide.booked_by] : [];
+          // Fix TypeScript error by properly typing booked_by
+          let bookedByArray: string[] = [];
+          
+          // Handle different possible types of booked_by
+          if (currentRide.booked_by) {
+            if (Array.isArray(currentRide.booked_by)) {
+              bookedByArray = [...currentRide.booked_by];
+            } else if (typeof currentRide.booked_by === 'string') {
+              // If somehow it's a string, try to parse it or use as a single element
+              try {
+                const parsed = JSON.parse(currentRide.booked_by);
+                bookedByArray = Array.isArray(parsed) ? parsed : [currentRide.booked_by];
+              } catch {
+                bookedByArray = [currentRide.booked_by];
+              }
+            }
+          }
           
           const updatedBookedBy = bookedByArray.filter(id => id !== booking.user_id);
           

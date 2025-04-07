@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Ride } from "@/lib/types";
@@ -8,6 +9,7 @@ import BookingSuccessCard from "@/components/BookingSuccessCard";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const RideDetails = () => {
   const { rideId } = useParams<{ rideId: string }>();
@@ -18,6 +20,7 @@ const RideDetails = () => {
   const [searchParams] = useSearchParams();
   const bookingSuccess = searchParams.get('booking_success') === 'true';
   const bookingId = searchParams.get('booking_id') || '';
+  const { user } = useAuth();
   
   const loadRideDetails = async () => {
     if (!rideId) return;
@@ -90,6 +93,9 @@ const RideDetails = () => {
   if (!ride) {
     return null; // Will redirect to not found via useEffect
   }
+
+  // Check if this user has booked this ride
+  const isPassenger = user && ride.bookedBy && ride.bookedBy.includes(user.id);
 
   return (
     <div className="min-h-screen pt-24 pb-20">

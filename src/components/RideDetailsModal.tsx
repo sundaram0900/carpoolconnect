@@ -20,7 +20,7 @@ const RideDetailsModal = ({
 }: RideDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
   const [ride, setRide] = useState<Ride>(initialRide);
-  const { bookRide } = useBookRide(ride.id);
+  const { bookRide, cancelBooking } = useBookRide(ride.id);
   
   useEffect(() => {
     setRide(initialRide);
@@ -61,6 +61,7 @@ const RideDetailsModal = ({
               onBookClick={bookRide} 
               onBookingSuccess={handleBookingSuccess}
               onRideUpdate={handleRideUpdate}
+              onCancelBooking={cancelBooking}
               defaultTab="details"
             />
           </Tabs>

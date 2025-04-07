@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ride, User, BookingFormData } from "@/lib/types";
@@ -50,6 +49,7 @@ interface RideDetailsModalTabsProps {
   ride: Ride;
   defaultTab?: string;
   onBookClick: (formData: BookingFormData) => Promise<{ success: boolean; bookingId?: string }>;
+  onCancelBooking?: (bookingId: string) => Promise<boolean>;
   onBookingSuccess?: () => Promise<void>;
   onRideUpdate?: (updatedRide: Ride) => void;
 }
@@ -58,6 +58,7 @@ const RideDetailsModalTabs = ({
   ride, 
   defaultTab = "details",
   onBookClick,
+  onCancelBooking,
   onBookingSuccess,
   onRideUpdate
 }: RideDetailsModalTabsProps) => {
@@ -67,7 +68,6 @@ const RideDetailsModalTabs = ({
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const { user } = useAuth();
-  const { bookRide, cancelBooking } = useBookRide(ride.id);
   
   const isDriver = user?.id === ride.driver.id;
   const isPassenger = ride.bookedBy?.includes(user?.id || "");
@@ -138,15 +138,23 @@ const RideDetailsModalTabs = ({
     setIsCancelling(true);
     try {
       // Find the booking ID for this user and ride
-      const { data: bookings } = await supabase
+      const { data: bookings, error } = await supabase
         .from('bookings')
         .select('id')
         .eq('ride_id', ride.id)
         .eq('user_id', user.id)
         .single();
       
-      if (bookings) {
-        const success = await cancelBooking(bookings.id);
+      if (error) {
+        console.error("Error finding booking:", error);
+        toast.error("Could not find your booking");
+        setIsCancelling(false);
+        setIsCancelDialogOpen(false);
+        return;
+      }
+      
+      if (bookings && onCancelBooking) {
+        const success = await onCancelBooking(bookings.id);
         if (success) {
           toast.success("Your booking has been cancelled");
           refreshRideData();
@@ -449,7 +457,7 @@ const RideDetailsModalTabs = ({
         ride={ride}
         isOpen={isBookModalOpen}
         onClose={() => setIsBookModalOpen(false)}
-        onBook={bookRide}
+        onBook={onBookClick}
       />
 
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
